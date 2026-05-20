@@ -56,6 +56,7 @@ function applyFilters() {
   const q        = (document.getElementById('search-q').value || '').toLowerCase().trim();
   const state    = document.getElementById('f-state').value;
   const status   = document.getElementById('f-status').value;
+  const severity = document.getElementById('f-severity')?.value || '';
   const label    = document.getElementById('f-label').value;
   const assignee = document.getElementById('f-assignee').value;
   const period   = parseInt(document.getElementById('f-period').value) || 0;
@@ -66,6 +67,7 @@ function applyFilters() {
     if (q && !i.title.toLowerCase().includes(q) && !String(i.number).includes(q)) return false;
     if (state && i.state !== state) return false;
     if (status && i.project_status !== status) return false;
+    if (severity && !i.labels.some(l => l.name === severity)) return false;
     if (label && !i.labels.some(l => l.name === label)) return false;
     if (assignee && !(i.assignees||[]).some(a => a.login === assignee)) return false;
     if (cutoff && new Date(i.created_at) < cutoff) return false;
@@ -81,6 +83,7 @@ function clearFilters() {
   document.getElementById('search-q').value = '';
   document.getElementById('f-state').value  = '';
   document.getElementById('f-status').value = '';
+  const fs = document.getElementById('f-severity'); if (fs) fs.value = '';
   document.getElementById('f-label').value  = '';
   document.getElementById('f-assignee').value = '';
   document.getElementById('f-period').value = '';
@@ -215,7 +218,7 @@ function renderTimeline(sorted) {
     }
   });
 
-  // Individual issue bars (show newest 100 in filter)
+  // Individual issue rows (show newest 100 in filter)
   const show = sorted.slice(0, 100);
   const now  = new Date();
   const wrap = document.getElementById('timeline-items');
@@ -226,18 +229,19 @@ function renderTimeline(sorted) {
     const stateTag = i.state === 'open'
       ? `<span class="state-open">open</span>`
       : `<span class="state-closed">closed</span>`;
-    return `<div class="tl-item">
-      <div class="tl-meta">
+    const barPct   = Math.min(100, Math.round(age / 365 * 100));
+    return `<div class="tl-row">
+      <div class="tl-left">
         <a href="https://github.com/pucardotorg/dristi/issues/${i.number}" target="_blank" class="tl-num">#${i.number}</a>
         ${stateTag}
         ${statusPill(i.project_status)}
-        <span class="tl-title">${escHtml(i.title.slice(0,60))}${i.title.length>60?'…':''}</span>
       </div>
-      <div class="tl-bar-row">
-        <span class="tl-date">${created.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'2-digit'})}</span>
-        <div class="tl-track">
-          <div class="tl-fill ${i.state==='open'?'tl-open':'tl-closed'}" style="width:${Math.min(100, Math.round(age/365*100))}%;min-width:4px" title="${age} days"></div>
-        </div>
+      <div class="tl-mid">
+        <span class="tl-title">${escHtml(i.title.slice(0,70))}${i.title.length>70?'…':''}</span>
+        <span class="tl-created">${created.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}</span>
+      </div>
+      <div class="tl-right">
+        <div class="tl-track"><div class="tl-fill ${i.state==='open'?'tl-open':'tl-closed'}" style="width:${barPct}%;min-width:4px" title="${age} days"></div></div>
         <span class="tl-age">${age}d</span>
       </div>
     </div>`;

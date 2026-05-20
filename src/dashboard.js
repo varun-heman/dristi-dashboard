@@ -180,7 +180,54 @@ function renderDashboard(raw) {
   }
 
   buildCharts(trend, ab, topLabels);
+  renderLatestBugs(issues, '');
   document.getElementById('ai-section').style.display = 'block';
+}
+
+// ── Latest bugs ───────────────────────────────────────────────
+let _allIssuesForBugs = [];
+function renderLatestBugs(issues, severityFilter) {
+  _allIssuesForBugs = issues;
+  const now  = new Date();
+  const bugs = issues
+    .filter(i => !i.pull_request && i.labels.some(l => l.name.toLowerCase().includes('bug') || l.name.toLowerCase().includes('severity')))
+    .filter(i => !severityFilter || i.labels.some(l => l.name === severityFilter))
+    .sort((a,b) => new Date(b.created_at) - new Date(a.created_at))
+    .slice(0, 10);
+
+  const SMAP = {
+    'severity/showstopper': ['sev-chip sev-ss-chip','🔴 Showstopper'],
+    'severity/high':        ['sev-chip sev-hi-chip','🟠 High'],
+    'severity/medium':      ['sev-chip sev-md-chip','🟡 Medium'],
+    'severity/low':         ['sev-chip sev-lo-chip','🟢 Low'],
+  };
+
+  document.getElementById('latest-bugs').innerHTML = bugs.length ? bugs.map(i => {
+    const sevLabel = i.labels.find(l => SMAP[l.name]);
+    const [cls, txt] = sevLabel ? SMAP[sevLabel.name] : ['sev-chip sev-none-chip','—'];
+    const age  = daysBetween(i.created_at, now);
+    const stateTag = i.state === 'open'
+      ? `<span class="state-open">open</span>`
+      : `<span class="state-closed">closed</span>`;
+    return `<div class="bug-row">
+      <div class="bug-left">
+        <a href="https://github.com/pucardotorg/dristi/issues/${i.number}" target="_blank" class="bug-num">#${i.number}</a>
+        <span class="${cls}">${txt}</span>
+        ${stateTag}
+      </div>
+      <div class="bug-mid">
+        <span class="bug-title">${i.title.slice(0,70)}${i.title.length>70?'…':''}</span>
+        <div class="bug-meta">${statusPill(i.project_status)} <span class="bug-age">${age}d ago</span></div>
+      </div>
+    </div>`;
+  }).join('') : '<div style="color:#94a3b8;font-size:13px;padding:8px 0">No bugs found for this filter.</div>';
+}
+
+function setSeverity(sev) {
+  document.querySelectorAll('.sev-btn').forEach(b => b.classList.remove('active'));
+  const match = [...document.querySelectorAll('.sev-btn')].find(b => b.getAttribute('onclick')?.includes(`'${sev}'`));
+  if (match) match.classList.add('active');
+  renderLatestBugs(_allIssuesForBugs, sev);
 }
 
 // ── Charts ────────────────────────────────────────────────────
