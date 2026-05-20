@@ -26,7 +26,14 @@ jobs:
       - name: Install Python deps
         run: pip install requests
 
-      # ── 3. Fetch GitHub issues + project status ─────────────
+      # ── 3. Restore previous cache from gh-pages ────────────
+      - name: Restore previous issues.json (for delta sync)
+        run: |
+          mkdir -p data
+          curl -sf "https://varun-heman.github.io/dristi-dashboard/data/issues.json" \
+            -o data/issues.json && echo "  Cache restored." || echo "  No cache found — will do full fetch."
+
+      # ── 4. Fetch only new/updated issues ────────────────────
       - name: Fetch issues data
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
