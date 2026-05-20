@@ -14,7 +14,7 @@ function switchTab(name) {
 (async function boot() {
   showLoader('Loading dashboard data…', '');
   try {
-    const resp = await fetch('../data/issues.json');
+    const resp = await fetch('data/issues.json');
     if (!resp.ok) throw new Error(`data/issues.json not found (${resp.status}). Has the GitHub Action run yet?`);
     const payload = await resp.json();
     _issuesData = payload.issues || [];

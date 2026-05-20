@@ -98,7 +98,7 @@ async function runAnalysis() {
   box.innerHTML = '<div style="color:#94a3b8;font-size:13px">⟳ Loading analysis…</div>';
 
   try {
-    const resp = await fetch('../data/analysis.json');
+    const resp = await fetch('data/analysis.json');
     if (!resp.ok) throw new Error(`analysis.json not found (${resp.status})`);
     const payload = await resp.json();
 
