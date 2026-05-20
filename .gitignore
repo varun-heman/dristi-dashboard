@@ -1,0 +1,13 @@
+# Generated data — never commit to source branch
+data/issues.json
+
+# Build output
+dist/
+
+# Python
+__pycache__/
+*.pyc
+.env
+
+# macOS
+.DS_Store
