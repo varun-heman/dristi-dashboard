@@ -83,6 +83,21 @@
     <div class="card"><h3>📋 Health Scorecard</h3><table class="stbl" id="scorecard"></table></div>
   </div>
 
+  <!-- Latest bugs + severity filter -->
+  <div class="card" style="margin-bottom:16px">
+    <div class="section-hdr">
+      <h3>🐛 Latest Bugs Filed</h3>
+      <div class="severity-tabs" id="severity-tabs">
+        <button class="sev-btn active" onclick="setSeverity('')">All</button>
+        <button class="sev-btn sev-ss"  onclick="setSeverity('severity/showstopper')">Showstopper</button>
+        <button class="sev-btn sev-hi"  onclick="setSeverity('severity/high')">High</button>
+        <button class="sev-btn sev-md"  onclick="setSeverity('severity/medium')">Medium</button>
+        <button class="sev-btn sev-lo"  onclick="setSeverity('severity/low')">Low</button>
+      </div>
+    </div>
+    <div id="latest-bugs"></div>
+  </div>
+
   <!-- Label chart -->
   <div class="card" style="margin-bottom:16px">
     <h3>Open Issues by Label</h3>
@@ -130,30 +145,41 @@
 
   <!-- Toolbar -->
   <div class="search-toolbar">
-    <input type="text" id="search-q" placeholder="Search by title or issue number…" oninput="debounceSearch()" />
-    <select id="f-state" onchange="applyFilters()">
-      <option value="">All states</option>
-      <option value="open">Open</option>
-      <option value="closed">Closed</option>
-    </select>
-    <select id="f-status" onchange="applyFilters()">
-      <option value="">All statuses</option>
-    </select>
-    <select id="f-label" onchange="applyFilters()">
-      <option value="">All labels</option>
-    </select>
-    <select id="f-assignee" onchange="applyFilters()">
-      <option value="">All assignees</option>
-    </select>
-    <select id="f-period" onchange="applyFilters()">
-      <option value="">All time</option>
-      <option value="7">Last 7 days</option>
-      <option value="30">Last 30 days</option>
-      <option value="90">Last 90 days</option>
-      <option value="180">Last 180 days</option>
-    </select>
-    <span class="results-count" id="results-count"></span>
-    <button class="btn-sm" onclick="clearFilters()">✕ Clear</button>
+    <div class="search-toolbar-top">
+      <input type="text" id="search-q" placeholder="Search by title or issue number…" oninput="debounceSearch()" />
+      <span class="results-count" id="results-count"></span>
+      <button class="btn-sm" onclick="clearFilters()">✕ Clear</button>
+    </div>
+    <div class="search-toolbar-filters">
+      <select id="f-state" onchange="applyFilters()">
+        <option value="">All states</option>
+        <option value="open">Open</option>
+        <option value="closed">Closed</option>
+      </select>
+      <select id="f-status" onchange="applyFilters()">
+        <option value="">All project statuses</option>
+      </select>
+      <select id="f-severity" onchange="applyFilters()">
+        <option value="">All severities</option>
+        <option value="severity/showstopper">Showstopper</option>
+        <option value="severity/high">High</option>
+        <option value="severity/medium">Medium</option>
+        <option value="severity/low">Low</option>
+      </select>
+      <select id="f-label" onchange="applyFilters()">
+        <option value="">All labels</option>
+      </select>
+      <select id="f-assignee" onchange="applyFilters()">
+        <option value="">All assignees</option>
+      </select>
+      <select id="f-period" onchange="applyFilters()">
+        <option value="">All time</option>
+        <option value="7">Last 7 days</option>
+        <option value="30">Last 30 days</option>
+        <option value="90">Last 90 days</option>
+        <option value="180">Last 180 days</option>
+      </select>
+    </div>
   </div>
 
   <!-- Table view -->
