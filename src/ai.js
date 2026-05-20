@@ -1,8 +1,9 @@
-// ai.js — AI analysis + streaming chat via OpenRouter
+// ai.js — AI analysis + streaming chat via Cloudflare Worker proxy
 
-const OR_KEY   = '__OPENROUTER_KEY__';   // replaced at deploy time by GitHub Actions
-const OR_MODEL = 'anthropic/claude-3.5-haiku';
-const OR_URL   = 'https://openrouter.ai/api/v1/chat/completions';
+// The Worker URL — update this after you deploy the Cloudflare Worker
+const WORKER_URL = 'https://dristi-ai.earthdb.workers.dev';
+const OR_MODEL   = 'anthropic/claude-3.5-haiku';
+const OR_URL     = WORKER_URL;   // all requests go through the proxy
 
 // ── Build context string from real issue data ─────────────────
 function buildAIContext(issues) {
@@ -89,48 +90,34 @@ ${recentClosed}
 `.trim();
 }
 
-// ── Run analysis on load ──────────────────────────────────────
+// ── Load pre-generated analysis from data/analysis.json ──────
 let _aiCtx = '';
 
 async function runAnalysis() {
-  if (!OR_KEY || OR_KEY === '__OPENROUTER_KEY__') {
-    document.getElementById('ai-analysis').innerHTML =
-      '<div style="color:#f59e0b;font-size:13px">⚠️ OpenRouter key not set — AI analysis unavailable in this build.</div>';
-    return;
-  }
-
-  // Build context from live data
-  // _issuesData is defined in dashboard.js and is in scope
-  if (typeof _issuesData === 'undefined' || !_issuesData.length) {
-    document.getElementById('ai-analysis').innerHTML =
-      '<div style="color:#94a3b8;font-size:13px">No data loaded yet.</div>';
-    return;
-  }
-
-  _aiCtx = buildAIContext(_issuesData);
-
   const box = document.getElementById('ai-analysis');
-  box.innerHTML = '<div style="color:#94a3b8;font-size:13px">⟳ Analysing…</div>';
-
-  const prompt = `You are a senior engineering program manager reviewing GitHub issue health data for an open-source court case management system (PUCAR v1.0).
-
-Here is the current issue health data:
-
-${_aiCtx}
-
-Please provide:
-1. **Overall health assessment** (2–3 sentences)
-2. **Top 3 risks** that need immediate attention
-3. **Actionable recommendations** (bullet points, specific and concrete)
-4. **Positive signals** (what's going well)
-
-Be concise and direct. Focus on what matters most for a small engineering team.`;
+  box.innerHTML = '<div style="color:#94a3b8;font-size:13px">⟳ Loading analysis…</div>';
 
   try {
-    const text = await streamCompletion(prompt, box);
-    box.innerHTML = markdownToHtml(text);
+    const resp = await fetch('../data/analysis.json');
+    if (!resp.ok) throw new Error(`analysis.json not found (${resp.status})`);
+    const payload = await resp.json();
+
+    if (!payload.analysis) {
+      box.innerHTML = '<div style="color:#94a3b8;font-size:13px">No analysis available yet — run the workflow to generate it.</div>';
+      return;
+    }
+
+    const ts = payload.generated_at
+      ? `<div style="font-size:11px;color:#94a3b8;margin-bottom:8px">Generated ${new Date(payload.generated_at).toLocaleString('en-GB')} · ${payload.model}</div>`
+      : '';
+    box.innerHTML = ts + markdownToHtml(payload.analysis);
+
+    // Build context for chat from live issue data
+    if (typeof _issuesData !== 'undefined' && _issuesData.length) {
+      _aiCtx = buildAIContext(_issuesData);
+    }
   } catch (err) {
-    box.innerHTML = `<div style="color:#f87171;font-size:13px">AI error: ${err.message}</div>`;
+    box.innerHTML = `<div style="color:#f87171;font-size:13px">Could not load analysis: ${err.message}</div>`;
   }
 }
 
@@ -143,7 +130,7 @@ async function sendChat() {
   if (!msg) return;
   input.value = '';
 
-  if (!OR_KEY || OR_KEY === '__OPENROUTER_KEY__') { appendChat('assistant', '⚠️ OpenRouter key not set.'); return; }
+  if (!WORKER_URL || WORKER_URL.includes('YOUR_SUBDOMAIN')) { appendChat('assistant', '⚠️ Worker URL not configured.'); return; }
 
   // Show user message
   appendChat('user', msg);
@@ -192,7 +179,7 @@ async function streamCompletion(prompt, targetEl, messagesOverride) {
 
   const resp = await fetch(OR_URL, {
     method: 'POST',
-    headers: { 'Authorization': `Bearer ${OR_KEY}`, 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ model: OR_MODEL, messages, stream: true, max_tokens: 1200 })
   });
 

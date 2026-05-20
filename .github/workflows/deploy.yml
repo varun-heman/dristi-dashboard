@@ -32,23 +32,23 @@ jobs:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: python scripts/fetch_data.py
 
-      # ── 4. Build site: copy src → dist, inject secrets ──────
-      - name: Build site
+      # ── 4. Generate AI analysis (key stays in GitHub Secrets) ──
+      - name: Generate AI analysis
         env:
           OPENROUTER_KEY: ${{ secrets.OPENROUTER_KEY }}
+        run: python scripts/generate_analysis.py
+
+      # ── 5. Build site: copy src → dist ──────────────────────
+      - name: Build site
         run: |
           mkdir -p dist/data
 
           # Copy static assets
           cp -r src/* dist/
 
-          # Copy the freshly fetched data
+          # Copy fetched data + AI analysis
           cp data/issues.json dist/data/issues.json
-
-          # Inject the OpenRouter key into ai.js
-          # The placeholder __OPENROUTER_KEY__ is replaced with the real key.
-          # The key only ever exists in the deployed gh-pages branch, NOT in source.
-          sed -i "s|__OPENROUTER_KEY__|${OPENROUTER_KEY}|g" dist/ai.js
+          cp data/analysis.json dist/data/analysis.json
 
           echo "Build complete. Files in dist/:"
           ls -lh dist/
