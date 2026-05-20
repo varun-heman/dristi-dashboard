@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PUCAR v1.0 · Issues Health</title>
+<link rel="stylesheet" href="styles.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js"></script>
+</head>
+<body>
+
+<!-- ── Tab bar ── -->
+<nav class="tab-bar">
+  <div class="logo">dristi <span>// PUCAR v1.0</span></div>
+  <button class="tab-btn active" onclick="switchTab('dashboard')">📊 Dashboard</button>
+  <button class="tab-btn"        onclick="switchTab('search')">🔍 Search &amp; Timeline</button>
+</nav>
+
+<!-- ── Loading overlay ── -->
+<div class="loading-overlay" id="loader" style="display:none">
+  <div class="spin-icon">⟳</div>
+  <div class="msg" id="loader-msg">Loading…</div>
+  <div class="sub"  id="loader-sub"></div>
+</div>
+
+<!-- ════════════════════════════════════════════════
+     TAB 1 — DASHBOARD
+════════════════════════════════════════════════ -->
+<div class="tab-content active" id="tab-dashboard">
+
+  <div class="err-banner" id="err-banner">
+    <b>⚠️ Could not load data</b>
+    <span id="err-msg"></span>
+  </div>
+
+  <div class="dash-header">
+    <div>
+      <h1>Issues Health Dashboard</h1>
+      <div class="sub">pucardotorg/dristi · PUCAR v1.0 Court Case Management System</div>
+    </div>
+    <div class="hdr-right">
+      <div class="sync-info">
+        <div id="cache-badge"></div>
+        <div id="sync-detail"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="alert-banner" id="alert-banner" style="display:none">
+    <span>🚨</span><span class="txt" id="alert-text"></span>
+  </div>
+
+  <!-- Scorecards -->
+  <div class="cards">
+    <div class="sc red"><div class="lbl">Open Issues</div><div class="val" id="v-open">—</div><div class="sub2" id="v-open-sub"></div></div>
+    <div class="sc red"><div class="lbl">Stale (30d+ no update)</div><div class="val" id="v-stale">—</div><div class="sub2" id="v-stale-sub"></div></div>
+    <div class="sc red"><div class="lbl">Open Showstoppers</div><div class="val" id="v-ss">—</div><div class="sub2" id="v-ss-sub"></div></div>
+    <div class="sc green"><div class="lbl">Median Close Time</div><div class="val" id="v-close">—</div><div class="sub2">When issues are closed</div></div>
+  </div>
+
+  <!-- Status breakdown (from GitHub Project) -->
+  <div class="row2" id="status-row" style="display:none">
+    <div class="card">
+      <h3>Project Status Breakdown (open issues)</h3>
+      <canvas id="statusChart" style="max-height:180px"></canvas>
+    </div>
+    <div class="card">
+      <h3>Status Summary</h3>
+      <div id="status-summary"></div>
+    </div>
+  </div>
+
+  <!-- Trend + Age -->
+  <div class="row2">
+    <div class="card"><h3>Monthly: Issues Created vs Closed</h3><canvas id="trendChart" style="max-height:200px"></canvas></div>
+    <div class="card"><h3>Open Issue Age</h3><canvas id="ageChart" style="max-height:200px"></canvas></div>
+  </div>
+
+  <!-- Showstoppers / Assignees / Scorecard -->
+  <div class="row3">
+    <div class="card"><h3>🔴 Oldest Open Showstoppers</h3><div id="ss-list"></div></div>
+    <div class="card"><h3>👤 Top Assignees (Open Issues)</h3><div id="assignee-list"></div></div>
+    <div class="card"><h3>📋 Health Scorecard</h3><table class="stbl" id="scorecard"></table></div>
+  </div>
+
+  <!-- Label chart -->
+  <div class="card" style="margin-bottom:16px">
+    <h3>Open Issues by Label</h3>
+    <canvas id="labelChart" style="max-height:150px"></canvas>
+  </div>
+
+  <!-- AI analysis -->
+  <div class="ai-section" id="ai-section" style="display:none">
+    <div class="ai-header">
+      <h3>🤖 AI Analysis <span class="model-badge">Claude 3.5 Haiku · OpenRouter</span></h3>
+      <button class="re-analyze-btn" onclick="runAnalysis()">↺ Re-analyse</button>
+    </div>
+    <div class="ai-analysis" id="ai-analysis"><div style="color:#94a3b8;font-size:13px">Waiting for data…</div></div>
+    <hr class="chat-divider">
+    <div class="chat-history" id="chat-history"></div>
+    <div class="chat-input-row">
+      <input type="text" id="chat-input" placeholder="Ask anything… e.g. "Who has the most overdue bugs?" or "List the 5 newest issues"" />
+      <button class="chat-send-btn" id="chat-send" onclick="sendChat()">Send</button>
+    </div>
+  </div>
+
+  <div class="footer">
+    Data refreshed nightly by GitHub Actions ·
+    <a href="https://github.com/pucardotorg/dristi/issues" target="_blank">View issues on GitHub ↗</a>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════
+     TAB 2 — SEARCH & TIMELINE
+════════════════════════════════════════════════ -->
+<div class="tab-content" id="tab-search">
+
+  <div class="dash-header" style="margin-bottom:16px">
+    <div>
+      <h1>Search &amp; Timeline</h1>
+      <div class="sub">Filter and explore all <span id="search-total">—</span> issues</div>
+    </div>
+    <div class="hdr-right">
+      <div class="view-toggle">
+        <button class="active" id="view-table-btn" onclick="setView('table')">☰ Table</button>
+        <button id="view-timeline-btn" onclick="setView('timeline')">📅 Timeline</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="search-toolbar">
+    <input type="text" id="search-q" placeholder="Search by title or issue number…" oninput="debounceSearch()" />
+    <select id="f-state" onchange="applyFilters()">
+      <option value="">All states</option>
+      <option value="open">Open</option>
+      <option value="closed">Closed</option>
+    </select>
+    <select id="f-status" onchange="applyFilters()">
+      <option value="">All statuses</option>
+    </select>
+    <select id="f-label" onchange="applyFilters()">
+      <option value="">All labels</option>
+    </select>
+    <select id="f-assignee" onchange="applyFilters()">
+      <option value="">All assignees</option>
+    </select>
+    <select id="f-period" onchange="applyFilters()">
+      <option value="">All time</option>
+      <option value="7">Last 7 days</option>
+      <option value="30">Last 30 days</option>
+      <option value="90">Last 90 days</option>
+      <option value="180">Last 180 days</option>
+    </select>
+    <span class="results-count" id="results-count"></span>
+    <button class="btn-sm" onclick="clearFilters()">✕ Clear</button>
+  </div>
+
+  <!-- Table view -->
+  <div id="view-table">
+    <div class="card" style="padding:0;overflow:hidden">
+      <div class="issues-table-wrap">
+        <table class="issues-table">
+          <thead>
+            <tr>
+              <th onclick="sortBy('number')">#</th>
+              <th onclick="sortBy('title')">Title</th>
+              <th onclick="sortBy('project_status')">Status</th>
+              <th onclick="sortBy('state')">State</th>
+              <th onclick="sortBy('created_at')">Created</th>
+              <th onclick="sortBy('updated_at')">Updated</th>
+              <th onclick="sortBy('assignee')">Assignee</th>
+            </tr>
+          </thead>
+          <tbody id="issues-tbody"></tbody>
+        </table>
+      </div>
+      <div class="pagination" id="pagination"></div>
+    </div>
+  </div>
+
+  <!-- Timeline view -->
+  <div id="view-timeline" style="display:none">
+    <div class="card" style="margin-bottom:16px">
+      <h3>Issue Volume Over Time (filtered)</h3>
+      <canvas id="timelineChart" style="max-height:220px"></canvas>
+    </div>
+    <div class="card">
+      <h3>Individual Issues on Timeline</h3>
+      <div class="timeline-wrap" id="timeline-items"></div>
+    </div>
+  </div>
+
+</div>
+
+<script src="dashboard.js"></script>
+<script src="search.js"></script>
+<script src="ai.js"></script>
+</body>
+</html>
