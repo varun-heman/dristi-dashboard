@@ -222,29 +222,45 @@ async function streamCompletion(prompt, targetEl, messagesOverride) {
 
 // ── Minimal markdown renderer ─────────────────────────────────
 function markdownToHtml(md) {
-  return md
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-    // Code blocks
-    .replace(/```[\s\S]*?```/g, m => `<pre><code>${m.slice(3,-3).trim()}</code></pre>`)
-    // Bold
+  // 1. Escape HTML special chars
+  let html = md
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;');
+
+  // 2. Fenced code blocks (preserve early so inner content isn't processed)
+  html = html.replace(/```[\s\S]*?```/g, m => `<pre><code>${m.slice(3,-3).trim()}</code></pre>`);
+
+  // 3. Inline formatting
+  html = html
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    // Italic
-    .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    // Headers
+    .replace(/\*(.+?)\*/g,     '<em>$1</em>');
+
+  // 4. Headers
+  html = html
     .replace(/^### (.+)$/gm, '<h4>$1</h4>')
     .replace(/^## (.+)$/gm,  '<h3>$1</h3>')
-    .replace(/^# (.+)$/gm,   '<h2>$1</h2>')
-    // Bullet points
-    .replace(/^- (.+)$/gm,   '<li>$1</li>')
-    .replace(/(<li>[\s\S]+?<\/li>)/g, '<ul>$1</ul>')
-    // Numbered lists
-    .replace(/^\d+\. (.+)$/gm, '<li>$1</li>')
-    // Line breaks
-    .replace(/\n\n/g, '</p><p>')
-    .replace(/\n/g, '<br>')
-    // Wrap in paragraph
-    .replace(/^(.)/,'<p>$1')
-    + '</p>';
+    .replace(/^# (.+)$/gm,   '<h2>$1</h2>');
+
+  // 5. List items
+  html = html
+    .replace(/^[-*] (.+)$/gm,   '<li>$1</li>')
+    .replace(/^\d+\. (.+)$/gm,  '<li>$1</li>');
+
+  // 6. Group consecutive <li> lines into a single <ul>
+  html = html.replace(/((?:<li>[^\n]*<\/li>\n?)+)/g,
+    m => '<ul>' + m.replace(/\n/g, '') + '</ul>');
+
+  // 7. Split on blank lines and wrap non-block content in <p>
+  const BLOCK = /^<(h[1-6]|ul|ol|pre|blockquote)/;
+  html = html.split(/\n{2,}/).map(block => {
+    block = block.trim();
+    if (!block) return '';
+    if (BLOCK.test(block)) return block;
+    return '<p>' + block.replace(/\n/g, '<br>') + '</p>';
+  }).join('');
+
+  return html;
 }
 
 // ── Enter key in chat input ───────────────────────────────────
