@@ -180,13 +180,23 @@ code { background: #f1f5f9; padding: 1px 5px; border-radius: 3px; font-size: 12p
 .sev-btn.sev-lo.active  { background: #16a34a; border-color: #16a34a; }
 
 /* ── Bug rows ── */
-.bug-row { display: flex; align-items: flex-start; gap: 12px; padding: 9px 0; border-bottom: 1px solid #f1f5f9; }
+/* ── Bug pagination ── */
+.pg-bar { display: flex; align-items: center; gap: 4px; padding: 12px 0 4px; flex-wrap: wrap; }
+.pg-info { font-size: 11px; color: #94a3b8; margin-right: 8px; }
+.pg-btn { background: #fff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 4px 10px; font-size: 12px; font-weight: 500; color: #475569; cursor: pointer; transition: background .1s, color .1s; }
+.pg-btn:hover:not(:disabled) { background: #f1f5f9; color: #0f172a; }
+.pg-btn:disabled { opacity: .4; cursor: not-allowed; }
+.pg-btn.pg-active { background: #0f172a; color: #fff; border-color: #0f172a; }
+.pg-ellipsis { font-size: 12px; color: #94a3b8; padding: 0 2px; }
+
+.bug-row { display: flex; align-items: flex-start; gap: 12px; padding: 9px 0; border-bottom: 1px solid #f1f5f9; cursor: pointer; border-radius: 6px; transition: background .1s; }
+.bug-row:hover { background: #f8fafc; }
 .bug-row:last-child { border-bottom: none; }
 .bug-left { display: flex; align-items: center; gap: 6px; white-space: nowrap; padding-top: 1px; min-width: 260px; }
 .bug-num  { font-size: 12px; font-weight: 700; color: #2563eb; text-decoration: none; min-width: 44px; }
 .bug-num:hover { text-decoration: underline; }
 .bug-mid  { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
-.bug-title { font-size: 13px; font-weight: 500; color: #0f172a; line-height: 1.4; }
+.bug-title { font-size: 13px; font-weight: 500; color: #0f172a; line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .bug-meta  { display: flex; align-items: center; gap: 8px; }
 .bug-age   { font-size: 11px; color: #94a3b8; }
 .sev-chip  { border-radius: 20px; padding: 2px 8px; font-size: 11px; font-weight: 600; white-space: nowrap; }
@@ -204,6 +214,11 @@ code { background: #f1f5f9; padding: 1px 5px; border-radius: 3px; font-size: 12p
 .re-analyze-btn { background: transparent; border: 1px solid #e2e8f0; border-radius: 6px; padding: 5px 12px; font-size: 11px; color: #64748b; cursor: pointer; }
 .re-analyze-btn:hover { background: #f8fafc; color: #0f172a; }
 .ai-analysis { padding: 20px; min-height: 80px; }
+.ai-analysis h2, .ai-analysis h3, .ai-analysis h4 { margin-top: 16px; margin-bottom: 6px; font-size: 13px; color: #0f172a; }
+.ai-analysis h2:first-child, .ai-analysis h3:first-child, .ai-analysis h4:first-child { margin-top: 0; }
+.ai-analysis ul { margin: 4px 0 8px 18px; }
+.ai-analysis li { margin-bottom: 3px; font-size: 13px; line-height: 1.6; }
+.ai-analysis p { font-size: 13px; line-height: 1.6; margin-bottom: 8px; }
 .ai-text { font-size: 13px; color: #1e293b; line-height: 1.8; }
 .ai-text strong { color: #0f172a; }
 .chat-divider { border: none; border-top: 1px solid #f1f5f9; margin: 0; }

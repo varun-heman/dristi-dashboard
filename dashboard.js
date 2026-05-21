@@ -185,42 +185,86 @@ function renderDashboard(raw) {
 }
 
 // ── Latest bugs ───────────────────────────────────────────────
+const BUGS_PAGE_SIZE = 20;
+const BUGS_MAX       = 500;
 let _allIssuesForBugs = [];
+let _filteredBugs     = [];
+let _bugsPage         = 1;
+
+const SMAP = {
+  'severity/showstopper': ['sev-chip sev-ss-chip','🔴 Showstopper'],
+  'severity/high':        ['sev-chip sev-hi-chip','🟠 High'],
+  'severity/medium':      ['sev-chip sev-md-chip','🟡 Medium'],
+  'severity/low':         ['sev-chip sev-lo-chip','🟢 Low'],
+};
+
 function renderLatestBugs(issues, severityFilter) {
   _allIssuesForBugs = issues;
-  const now  = new Date();
-  const bugs = issues
+  _bugsPage = 1;
+  _filteredBugs = issues
     .filter(i => !i.pull_request && i.labels.some(l => l.name.toLowerCase().includes('bug') || l.name.toLowerCase().includes('severity')))
     .filter(i => !severityFilter || i.labels.some(l => l.name === severityFilter))
     .sort((a,b) => new Date(b.created_at) - new Date(a.created_at))
-    .slice(0, 10);
+    .slice(0, BUGS_MAX);
+  renderBugsPage();
+}
 
-  const SMAP = {
-    'severity/showstopper': ['sev-chip sev-ss-chip','🔴 Showstopper'],
-    'severity/high':        ['sev-chip sev-hi-chip','🟠 High'],
-    'severity/medium':      ['sev-chip sev-md-chip','🟡 Medium'],
-    'severity/low':         ['sev-chip sev-lo-chip','🟢 Low'],
-  };
+function renderBugsPage() {
+  const now   = new Date();
+  const total = _filteredBugs.length;
+  const pages = Math.ceil(total / BUGS_PAGE_SIZE);
+  const start = (_bugsPage - 1) * BUGS_PAGE_SIZE;
+  const page  = _filteredBugs.slice(start, start + BUGS_PAGE_SIZE);
 
-  document.getElementById('latest-bugs').innerHTML = bugs.length ? bugs.map(i => {
+  document.getElementById('latest-bugs').innerHTML = page.length ? page.map(i => {
     const sevLabel = i.labels.find(l => SMAP[l.name]);
     const sevChip  = sevLabel ? `<span class="${SMAP[sevLabel.name][0]}">${SMAP[sevLabel.name][1]}</span>` : '';
     const age  = daysBetween(i.created_at, now);
     const stateTag = i.state === 'open'
       ? `<span class="state-open">open</span>`
       : `<span class="state-closed">closed</span>`;
-    return `<div class="bug-row">
+    const url = `https://github.com/pucardotorg/dristi/issues/${i.number}`;
+    return `<div class="bug-row" onclick="window.open('${url}','_blank')" title="Open issue #${i.number} on GitHub">
       <div class="bug-left">
-        <a href="https://github.com/pucardotorg/dristi/issues/${i.number}" target="_blank" class="bug-num">#${i.number}</a>
+        <a href="${url}" target="_blank" class="bug-num" onclick="event.stopPropagation()">#${i.number}</a>
         ${sevChip}
         ${stateTag}
       </div>
       <div class="bug-mid">
-        <span class="bug-title">${i.title.slice(0,70)}${i.title.length>70?'…':''}</span>
+        <span class="bug-title">${i.title}</span>
         <div class="bug-meta">${statusPill(i.project_status)} <span class="bug-age">${age}d ago</span></div>
       </div>
     </div>`;
   }).join('') : '<div style="color:#94a3b8;font-size:13px;padding:8px 0">No bugs found for this filter.</div>';
+
+  // Pagination controls
+  const pg = document.getElementById('bugs-pagination');
+  if (pages <= 1) { pg.innerHTML = ''; return; }
+
+  const startNum = start + 1;
+  const endNum   = Math.min(start + BUGS_PAGE_SIZE, total);
+  let btns = `<span class="pg-info">Showing ${startNum}–${endNum} of ${total}</span>`;
+  btns += `<button class="pg-btn" onclick="bugGoPage(${_bugsPage - 1})" ${_bugsPage === 1 ? 'disabled' : ''}>‹ Prev</button>`;
+
+  // Page number buttons — show a window around current page
+  const lo = Math.max(1, _bugsPage - 2);
+  const hi = Math.min(pages, _bugsPage + 2);
+  if (lo > 1) btns += `<button class="pg-btn" onclick="bugGoPage(1)">1</button>${lo > 2 ? '<span class="pg-ellipsis">…</span>' : ''}`;
+  for (let p = lo; p <= hi; p++) {
+    btns += `<button class="pg-btn ${p === _bugsPage ? 'pg-active' : ''}" onclick="bugGoPage(${p})">${p}</button>`;
+  }
+  if (hi < pages) btns += `${hi < pages - 1 ? '<span class="pg-ellipsis">…</span>' : ''}<button class="pg-btn" onclick="bugGoPage(${pages})">${pages}</button>`;
+  btns += `<button class="pg-btn" onclick="bugGoPage(${_bugsPage + 1})" ${_bugsPage === pages ? 'disabled' : ''}>Next ›</button>`;
+
+  pg.innerHTML = `<div class="pg-bar">${btns}</div>`;
+}
+
+function bugGoPage(p) {
+  const pages = Math.ceil(_filteredBugs.length / BUGS_PAGE_SIZE);
+  if (p < 1 || p > pages) return;
+  _bugsPage = p;
+  renderBugsPage();
+  document.getElementById('latest-bugs').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function setSeverity(sev) {

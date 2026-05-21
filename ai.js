@@ -242,7 +242,9 @@ function markdownToHtml(md) {
     .replace(/^## (.+)$/gm,  '<h3>$1</h3>')
     .replace(/^# (.+)$/gm,   '<h2>$1</h2>')
     // Treat a line that is *only* a bold phrase (optionally ending in :) as an h4
-    .replace(/^(<strong>[^<\n]+<\/strong>:?)$/gm, '<h4>$1</h4>');
+    .replace(/^(<strong>[^<\n]+<\/strong>:?)$/gm, '<h4>$1</h4>')
+    // Ensure a blank line after every heading so the next block is separate
+    .replace(/(<\/h[1-6]>)\n(?!\n)/g, '$1\n\n');
 
   // 5. List items
   html = html
