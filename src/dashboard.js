@@ -51,7 +51,7 @@ function ageBadge(d) {
   return `<span class="badge ok">${d}d</span>`;
 }
 function statusPill(s) {
-  if (!s) return `<span class="status-pill status-unknown">—</span>`;
+  if (!s) return '';
   const key = s.toLowerCase().replace(/\s+/g,'');
   const cls = key.includes('done') ? 'status-done'
     : key.includes('progress') ? 'status-inprogress'

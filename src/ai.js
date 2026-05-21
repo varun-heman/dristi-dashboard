@@ -236,11 +236,13 @@ function markdownToHtml(md) {
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.+?)\*/g,     '<em>$1</em>');
 
-  // 4. Headers
+  // 4. Headers — both markdown-style and AI-style bold-only headers like **Foo:**
   html = html
     .replace(/^### (.+)$/gm, '<h4>$1</h4>')
     .replace(/^## (.+)$/gm,  '<h3>$1</h3>')
-    .replace(/^# (.+)$/gm,   '<h2>$1</h2>');
+    .replace(/^# (.+)$/gm,   '<h2>$1</h2>')
+    // Treat a line that is *only* a bold phrase (optionally ending in :) as an h4
+    .replace(/^(<strong>[^<\n]+<\/strong>:?)$/gm, '<h4>$1</h4>');
 
   // 5. List items
   html = html
