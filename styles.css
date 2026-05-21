@@ -182,7 +182,7 @@ code { background: #f1f5f9; padding: 1px 5px; border-radius: 3px; font-size: 12p
 /* ── Bug rows ── */
 .bug-row { display: flex; align-items: flex-start; gap: 12px; padding: 9px 0; border-bottom: 1px solid #f1f5f9; }
 .bug-row:last-child { border-bottom: none; }
-.bug-left { display: flex; align-items: center; gap: 6px; white-space: nowrap; padding-top: 1px; }
+.bug-left { display: flex; align-items: center; gap: 6px; white-space: nowrap; padding-top: 1px; min-width: 260px; }
 .bug-num  { font-size: 12px; font-weight: 700; color: #2563eb; text-decoration: none; min-width: 44px; }
 .bug-num:hover { text-decoration: underline; }
 .bug-mid  { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
