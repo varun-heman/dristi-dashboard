@@ -209,14 +209,15 @@ function renderLatestBugs(issues, severityFilter) {
     const stateTag = i.state === 'open'
       ? `<span class="state-open">open</span>`
       : `<span class="state-closed">closed</span>`;
-    return `<div class="bug-row">
+    const url = `https://github.com/pucardotorg/dristi/issues/${i.number}`;
+    return `<div class="bug-row" onclick="window.open('${url}','_blank')" title="Open issue #${i.number} on GitHub">
       <div class="bug-left">
-        <a href="https://github.com/pucardotorg/dristi/issues/${i.number}" target="_blank" class="bug-num">#${i.number}</a>
+        <a href="${url}" target="_blank" class="bug-num" onclick="event.stopPropagation()">#${i.number}</a>
         ${sevChip}
         ${stateTag}
       </div>
       <div class="bug-mid">
-        <span class="bug-title">${i.title.slice(0,70)}${i.title.length>70?'…':''}</span>
+        <span class="bug-title">${i.title}</span>
         <div class="bug-meta">${statusPill(i.project_status)} <span class="bug-age">${age}d ago</span></div>
       </div>
     </div>`;
