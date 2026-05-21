@@ -204,7 +204,7 @@ function renderLatestBugs(issues, severityFilter) {
 
   document.getElementById('latest-bugs').innerHTML = bugs.length ? bugs.map(i => {
     const sevLabel = i.labels.find(l => SMAP[l.name]);
-    const [cls, txt] = sevLabel ? SMAP[sevLabel.name] : ['sev-chip sev-none-chip','—'];
+    const sevChip  = sevLabel ? `<span class="${SMAP[sevLabel.name][0]}">${SMAP[sevLabel.name][1]}</span>` : '';
     const age  = daysBetween(i.created_at, now);
     const stateTag = i.state === 'open'
       ? `<span class="state-open">open</span>`
@@ -212,7 +212,7 @@ function renderLatestBugs(issues, severityFilter) {
     return `<div class="bug-row">
       <div class="bug-left">
         <a href="https://github.com/pucardotorg/dristi/issues/${i.number}" target="_blank" class="bug-num">#${i.number}</a>
-        <span class="${cls}">${txt}</span>
+        ${sevChip}
         ${stateTag}
       </div>
       <div class="bug-mid">
