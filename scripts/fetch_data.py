@@ -96,9 +96,10 @@ def slim_issue(i):
 # ── GraphQL: fetch project status ─────────────────────────────
 
 FIND_PROJECT_QUERY = """
-query($org: String!) {
+query($org: String!, $cursor: String) {
   organization(login: $org) {
-    projectsV2(first: 20) {
+    projectsV2(first: 100, after: $cursor) {
+      pageInfo { hasNextPage endCursor }
       nodes { id title }
     }
   }
@@ -146,21 +147,39 @@ def graphql(query, variables):
 
 
 def find_project_id():
-    data = graphql(FIND_PROJECT_QUERY, {"org": ORG})
-    projects = data["organization"]["projectsV2"]["nodes"]
-    for p in projects:
+    all_projects = []
+    cursor = None
+    while True:
+        try:
+            data = graphql(FIND_PROJECT_QUERY, {"org": ORG, "cursor": cursor})
+        except Exception as e:
+            print(f"  ERROR querying org projects: {e}")
+            print("  NOTE: GH_TOKEN may be missing the 'read:project' scope.")
+            return None
+        page_data = data["organization"]["projectsV2"]
+        batch = page_data["nodes"]
+        all_projects.extend(batch)
+        if not page_data["pageInfo"]["hasNextPage"]:
+            break
+        cursor = page_data["pageInfo"]["endCursor"]
+
+    print(f"  Found {len(all_projects)} projects in org:")
+    for p in all_projects:
+        print(f"    - '{p['title']}' (id={p['id']})")
         if PROJECT_NAME.lower() in p["title"].lower():
-            print(f"  Found project: '{p['title']}' (id={p['id']})")
+            print(f"  ✓ Matched project: '{p['title']}'")
             return p["id"]
-    print(f"  WARNING: project '{PROJECT_NAME}' not found. Available: {[p['title'] for p in projects]}")
+
+    print(f"  WARNING: No project matched '{PROJECT_NAME}'.")
     return None
 
 
 def fetch_project_status(project_id):
-    """Returns dict: issue_number (int) -> {status, sprint, ...}"""
+    """Returns dict: issue_number (int) -> {field_name: value, ...}"""
     status_map = {}
     cursor = None
     page = 1
+    seen_field_names = set()
     while True:
         print(f"  GraphQL project items page {page} ({len(status_map)} items so far)…")
         data = graphql(PROJECT_ITEMS_QUERY, {"projectId": project_id, "cursor": cursor})
@@ -176,6 +195,7 @@ def fetch_project_status(project_id):
                 value = fv.get("name") or fv.get("title") or ""
                 if field_name and value:
                     fields[field_name] = value
+                    seen_field_names.add(field_name)
             if fields:
                 status_map[number] = fields
         page_info = items_data["pageInfo"]
@@ -184,6 +204,7 @@ def fetch_project_status(project_id):
         cursor = page_info["endCursor"]
         page += 1
         time.sleep(0.1)
+    print(f"  All field names seen across project items: {sorted(seen_field_names)}")
     return status_map
 
 
