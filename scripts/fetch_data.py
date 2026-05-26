@@ -95,9 +95,20 @@ def slim_issue(i):
 
 # ── GraphQL: fetch project status ─────────────────────────────
 
-FIND_PROJECT_QUERY = """
+FIND_PROJECT_ORG_QUERY = """
 query($org: String!, $cursor: String) {
   organization(login: $org) {
+    projectsV2(first: 100, after: $cursor) {
+      pageInfo { hasNextPage endCursor }
+      nodes { id title }
+    }
+  }
+}
+"""
+
+FIND_PROJECT_REPO_QUERY = """
+query($owner: String!, $repo: String!, $cursor: String) {
+  repository(owner: $owner, name: $repo) {
     projectsV2(first: 100, after: $cursor) {
       pageInfo { hasNextPage endCursor }
       nodes { id title }
@@ -146,31 +157,55 @@ def graphql(query, variables):
     return data["data"]
 
 
-def find_project_id():
-    all_projects = []
-    cursor = None
+def _paginate_projects(query, variables, data_path):
+    """Generic paginator for projectsV2 queries. data_path e.g. ['organization','projectsV2']"""
+    results, cursor = [], None
     while True:
-        try:
-            data = graphql(FIND_PROJECT_QUERY, {"org": ORG, "cursor": cursor})
-        except Exception as e:
-            print(f"  ERROR querying org projects: {e}")
-            print("  NOTE: GH_TOKEN may be missing the 'read:project' scope.")
-            return None
-        page_data = data["organization"]["projectsV2"]
-        batch = page_data["nodes"]
-        all_projects.extend(batch)
-        if not page_data["pageInfo"]["hasNextPage"]:
+        variables["cursor"] = cursor
+        data = graphql(query, variables)
+        node = data
+        for key in data_path:
+            node = node[key]
+        results.extend(node["nodes"])
+        if not node["pageInfo"]["hasNextPage"]:
             break
-        cursor = page_data["pageInfo"]["endCursor"]
+        cursor = node["pageInfo"]["endCursor"]
+    return results
 
-    print(f"  Found {len(all_projects)} projects in org:")
-    for p in all_projects:
-        print(f"    - '{p['title']}' (id={p['id']})")
-        if PROJECT_NAME.lower() in p["title"].lower():
-            print(f"  ✓ Matched project: '{p['title']}'")
-            return p["id"]
+def find_project_id():
+    owner, repo = REPO.split("/")
 
-    print(f"  WARNING: No project matched '{PROJECT_NAME}'.")
+    # 1. Check org-level projects
+    try:
+        org_projects = _paginate_projects(
+            FIND_PROJECT_ORG_QUERY, {"org": ORG},
+            ["organization", "projectsV2"]
+        )
+        print(f"  Org-level projects ({len(org_projects)}):")
+        for p in org_projects:
+            print(f"    - '{p['title']}' (id={p['id']})")
+            if PROJECT_NAME.lower() in p["title"].lower():
+                print(f"  ✓ Matched at org level: '{p['title']}'")
+                return p["id"]
+    except Exception as e:
+        print(f"  Could not query org projects: {e}")
+
+    # 2. Fall back to repo-level projects
+    try:
+        repo_projects = _paginate_projects(
+            FIND_PROJECT_REPO_QUERY, {"owner": owner, "repo": repo},
+            ["repository", "projectsV2"]
+        )
+        print(f"  Repo-level projects ({len(repo_projects)}):")
+        for p in repo_projects:
+            print(f"    - '{p['title']}' (id={p['id']})")
+            if PROJECT_NAME.lower() in p["title"].lower():
+                print(f"  ✓ Matched at repo level: '{p['title']}'")
+                return p["id"]
+    except Exception as e:
+        print(f"  Could not query repo projects: {e}")
+
+    print(f"  WARNING: No project matched '{PROJECT_NAME}' at org or repo level.")
     return None
 
 
