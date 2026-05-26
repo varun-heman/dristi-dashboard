@@ -4,6 +4,78 @@ let _issuesData = [];
 let _fetchedAt  = null;
 let trendChart, ageChart, labelChart, statusChart;
 
+// ── Export to Excel ───────────────────────────────────────────
+function exportToExcel() {
+  if (!_issuesData.length) { alert('Data not loaded yet — please wait a moment.'); return; }
+
+  const btn = document.querySelector('.export-btn');
+  btn.textContent = '⏳ Preparing…';
+  btn.disabled = true;
+
+  try {
+    const now = new Date();
+
+    const SEVERITY_ORDER = ['severity/showstopper','severity/high','severity/medium','severity/low'];
+    function getSeverity(labels) {
+      const hit = SEVERITY_ORDER.find(s => labels.some(l => l.name === s));
+      return hit ? hit.replace('severity/','').replace(/^\w/, c => c.toUpperCase()) : '';
+    }
+    function fmtDate(iso) {
+      if (!iso) return '';
+      return new Date(iso).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' });
+    }
+    function daysOpen(i) {
+      const end = i.closed_at ? new Date(i.closed_at) : now;
+      return Math.floor((end - new Date(i.created_at)) / 86400000);
+    }
+
+    const rows = _issuesData
+      .filter(i => !i.pull_request)
+      .sort((a,b) => new Date(b.created_at) - new Date(a.created_at))
+      .map(i => ({
+        'Issue #':         i.number,
+        'Title':           i.title,
+        'State':           i.state === 'open' ? 'Open' : 'Closed',
+        'Severity':        getSeverity(i.labels || []),
+        'Project Status':  i.project_status || '',
+        'Assignees':       (i.assignees || []).map(a => a.login).join(', ') || (i.assignee?.login || ''),
+        'Labels':          (i.labels || []).map(l => l.name).join(', '),
+        'Created Date':    fmtDate(i.created_at),
+        'Updated Date':    fmtDate(i.updated_at),
+        'Closed Date':     fmtDate(i.closed_at),
+        'Days Open':       daysOpen(i),
+        'GitHub URL':      `https://github.com/pucardotorg/dristi/issues/${i.number}`,
+      }));
+
+    const ws = XLSX.utils.json_to_sheet(rows);
+
+    // Column widths
+    ws['!cols'] = [
+      { wch: 9 },   // Issue #
+      { wch: 70 },  // Title
+      { wch: 8 },   // State
+      { wch: 14 },  // Severity
+      { wch: 18 },  // Project Status
+      { wch: 20 },  // Assignees
+      { wch: 40 },  // Labels
+      { wch: 14 },  // Created
+      { wch: 14 },  // Updated
+      { wch: 14 },  // Closed
+      { wch: 10 },  // Days Open
+      { wch: 55 },  // URL
+    ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Issues');
+
+    const date = now.toISOString().slice(0,10);
+    XLSX.writeFile(wb, `dristi-issues-${date}.xlsx`);
+  } finally {
+    btn.textContent = '⬇ Export as Excel';
+    btn.disabled = false;
+  }
+}
+
 // ── Tab switching ─────────────────────────────────────────────
 function switchTab(name) {
   document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', ['dashboard','search'][i] === name));

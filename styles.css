@@ -48,6 +48,9 @@ code { background: #f1f5f9; padding: 1px 5px; border-radius: 3px; font-size: 12p
 .dash-header h1 { font-size: 20px; font-weight: 800; color: #0f172a; }
 .dash-header .sub { font-size: 12px; color: #64748b; margin-top: 3px; }
 .hdr-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+.export-btn { background: #16a34a; color: #fff; border: none; border-radius: 8px; padding: 8px 16px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; transition: background .15s; }
+.export-btn:hover { background: #15803d; }
+.export-btn:disabled { background: #94a3b8; cursor: not-allowed; }
 .sync-info { font-size: 11px; color: #64748b; text-align: right; line-height: 1.7; }
 .cache-badge { background: #f0fdf4; border: 1px solid #86efac; color: #166534; border-radius: 20px; padding: 2px 10px; font-size: 11px; font-weight: 600; display: inline-block; }
 
