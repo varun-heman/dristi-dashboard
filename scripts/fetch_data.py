@@ -222,13 +222,30 @@ def main():
         print("  Skipping project status fetch.")
 
     # ── Step 5: apply project status to all cached issues ──
+    # Log the field names we're actually seeing so mismatches are obvious in CI
+    if status_map:
+        sample_fields = next(iter(status_map.values()), {})
+        print(f"  Project field names found: {list(sample_fields.keys())}")
+
+    # Known status field name variants — add more here if the project renames it
+    STATUS_FIELD_NAMES  = {"Status", "status", "Workflow Status", "Stage", "State"}
+    SPRINT_FIELD_NAMES  = {"Sprint", "Iteration", "sprint", "iteration"}
+
+    def pick_field(fields, candidates):
+        """Return the first matching value, then fall back to the first single-select value."""
+        for name in candidates:
+            if fields.get(name):
+                return fields[name]
+        # Fallback: return first non-empty value from any field
+        return next((v for v in fields.values() if v), None)
+
     print("Applying project status to all issues…")
     issues = []
     for number, slim in cache.items():
         project_fields = status_map.get(number, {})
         if project_fields:
-            slim["project_status"] = project_fields.get("Status") or project_fields.get("status")
-            slim["project_sprint"] = project_fields.get("Sprint") or project_fields.get("Iteration")
+            slim["project_status"] = pick_field(project_fields, STATUS_FIELD_NAMES)
+            slim["project_sprint"] = pick_field(project_fields, SPRINT_FIELD_NAMES)
             slim["project_fields"] = project_fields
         else:
             slim.setdefault("project_status", None)
