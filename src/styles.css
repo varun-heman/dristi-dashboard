@@ -118,6 +118,30 @@ code { background: #f1f5f9; padding: 1px 5px; border-radius: 3px; font-size: 12p
 .state-closed { display: inline-flex; align-items: center; gap: 4px; background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0; border-radius: 20px; padding: 2px 8px; font-size: 11px; font-weight: 600; white-space: nowrap; }
 .state-closed::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #94a3b8; }
 
+/* ── Quick filter presets ── */
+.quick-filters { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+.qf-label { font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: .4px; white-space: nowrap; }
+.qf-btn { border: 1.5px solid #e2e8f0; background: #f8fafc; border-radius: 20px; padding: 5px 12px; font-size: 12px; font-weight: 600; cursor: pointer; color: #64748b; transition: all .15s; white-space: nowrap; }
+.qf-btn:hover { background: #f1f5f9; color: #334155; border-color: #cbd5e1; }
+.qf-btn.qf-active { background: #0f172a; color: #fff; border-color: #0f172a; }
+.qf-btn.qf-red { border-color: #fca5a5; color: #dc2626; }
+.qf-btn.qf-red:hover, .qf-btn.qf-red.qf-active { background: #dc2626; color: #fff; border-color: #dc2626; }
+.qf-btn.qf-amber { border-color: #fde68a; color: #b45309; }
+.qf-btn.qf-amber:hover, .qf-btn.qf-amber.qf-active { background: #d97706; color: #fff; border-color: #d97706; }
+.qf-btn.qf-blue { border-color: #93c5fd; color: #2563eb; }
+.qf-btn.qf-blue:hover, .qf-btn.qf-blue.qf-active { background: #2563eb; color: #fff; border-color: #2563eb; }
+.qf-btn.qf-gray { border-color: #e2e8f0; color: #475569; }
+
+/* ── Active filter chips ── */
+.active-filters { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding-top: 6px; border-top: 1px solid #f1f5f9; }
+.af-chip { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 20px; padding: 3px 10px; font-size: 11px; font-weight: 600; color: #2563eb; cursor: pointer; transition: background .1s; }
+.af-chip:hover { background: #dbeafe; }
+
+/* ── Date range inputs ── */
+.date-range-label { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: #64748b; white-space: nowrap; }
+.date-range-label input[type="date"] { border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 6px 8px; font-size: 12px; background: #f8fafc; outline: none; cursor: pointer; color: #475569; font-family: inherit; transition: border-color .15s; }
+.date-range-label input[type="date"]:focus { border-color: #2563eb; background: #fff; }
+
 /* ── Search tab toolbar ── */
 .search-toolbar { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px 16px; margin-bottom: 16px; display: flex; flex-direction: column; gap: 10px; }
 .search-toolbar-top { display: flex; gap: 10px; align-items: center; }

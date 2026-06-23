@@ -148,12 +148,22 @@
     </div>
   </div>
 
+  <!-- Quick filter presets -->
+  <div class="quick-filters">
+    <span class="qf-label">Quick:</span>
+    <button class="qf-btn qf-active" id="qf-all"           onclick="quickFilter('all')">All Issues</button>
+    <button class="qf-btn qf-red"    id="qf-showstoppers"  onclick="quickFilter('showstoppers')">🚨 Open Showstoppers</button>
+    <button class="qf-btn qf-amber"  id="qf-stale"         onclick="quickFilter('stale')">⏰ Stale 30d+</button>
+    <button class="qf-btn qf-blue"   id="qf-unassigned"    onclick="quickFilter('unassigned')">👤 Unassigned</button>
+    <button class="qf-btn qf-gray"   id="qf-nostatus"      onclick="quickFilter('nostatus')">❌ No Status</button>
+  </div>
+
   <!-- Toolbar -->
   <div class="search-toolbar">
     <div class="search-toolbar-top">
       <input type="text" id="search-q" placeholder="Search by title or issue number…" oninput="debounceSearch()" />
       <span class="results-count" id="results-count"></span>
-      <button class="btn-sm" onclick="clearFilters()">✕ Clear</button>
+      <button class="btn-sm" onclick="clearFilters()">✕ Clear all</button>
     </div>
     <div class="search-toolbar-filters">
       <select id="f-state" onchange="applyFilters()">
@@ -163,6 +173,7 @@
       </select>
       <select id="f-status" onchange="applyFilters()">
         <option value="">All project statuses</option>
+        <option value="__none__">— No status</option>
       </select>
       <select id="f-severity" onchange="applyFilters()">
         <option value="">All severities</option>
@@ -176,15 +187,13 @@
       </select>
       <select id="f-assignee" onchange="applyFilters()">
         <option value="">All assignees</option>
+        <option value="__unassigned__">— Unassigned</option>
       </select>
-      <select id="f-period" onchange="applyFilters()">
-        <option value="">All time</option>
-        <option value="7">Last 7 days</option>
-        <option value="30">Last 30 days</option>
-        <option value="90">Last 90 days</option>
-        <option value="180">Last 180 days</option>
-      </select>
+      <label class="date-range-label">From <input type="date" id="f-date-from" onchange="applyFilters()" /></label>
+      <label class="date-range-label">To <input type="date" id="f-date-to"   onchange="applyFilters()" /></label>
     </div>
+    <!-- Active filter chips -->
+    <div class="active-filters" id="active-filters" style="display:none"></div>
   </div>
 
   <!-- Table view -->

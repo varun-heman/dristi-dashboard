@@ -21,13 +21,15 @@ if not OPENROUTER_KEY:
 
 OR_URL  = "https://openrouter.ai/api/v1/chat/completions"
 
-# Free models to try in order — first one that works wins
+# Free models to try in order — first one that works wins.
+# Verified against OpenRouter /api/v1/models as of June 2025.
 OR_MODELS = [
-    "deepseek/deepseek-r1:free",
-    "google/gemma-3-27b-it:free",
-    "meta-llama/llama-3.3-70b-instruct:free",
-    "qwen/qwen3-8b:free",
-    "mistralai/mistral-7b-instruct:free",
+    "meta-llama/llama-3.3-70b-instruct:free",   # confirmed reachable (429 = rate-limited, not 404)
+    "meta-llama/llama-3.1-8b-instruct:free",
+    "google/gemma-2-9b-it:free",
+    "microsoft/phi-3-mini-128k-instruct:free",
+    "deepseek/deepseek-chat-v3-0324:free",
+    "nousresearch/hermes-3-llama-3.1-8b:free",
 ]
 
 def build_context(issues):
@@ -136,6 +138,7 @@ Be concise and direct. Focus on what matters most for a small engineering team."
     used_model    = None
     last_error    = None
 
+    import time
     for model in OR_MODELS:
         try:
             print(f"Trying model: {model}…")
@@ -145,6 +148,17 @@ Be concise and direct. Focus on what matters most for a small engineering team."
                 json={"model": model, "messages": [{"role": "user", "content": prompt}], "max_tokens": 1200},
                 timeout=60,
             )
+            if resp.status_code == 429:
+                # Rate-limited — model is valid, wait and retry once
+                wait = int(resp.headers.get("Retry-After", "10"))
+                print(f"  ⏳ {model} rate-limited (429), waiting {wait}s then retrying…")
+                time.sleep(wait)
+                resp = requests.post(
+                    OR_URL,
+                    headers={"Authorization": f"Bearer {OPENROUTER_KEY}", "Content-Type": "application/json"},
+                    json={"model": model, "messages": [{"role": "user", "content": prompt}], "max_tokens": 1200},
+                    timeout=60,
+                )
             resp.raise_for_status()
             analysis_text = resp.json()["choices"][0]["message"]["content"]
             used_model    = model
