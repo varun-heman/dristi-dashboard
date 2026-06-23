@@ -200,7 +200,16 @@
   <div id="view-table">
     <div class="card" style="padding:0;overflow:hidden">
       <div class="issues-table-wrap">
-        <table class="issues-table">
+        <table class="issues-table" id="issues-table">
+          <colgroup>
+            <col id="col-num"      style="width:62px">
+            <col id="col-title"    style="width:38%">
+            <col id="col-status"   style="width:120px">
+            <col id="col-state"    style="width:88px">
+            <col id="col-created"  style="width:100px">
+            <col id="col-updated"  style="width:100px">
+            <col id="col-assignee" style="width:auto">
+          </colgroup>
           <thead>
             <tr>
               <th onclick="sortBy('number')">#</th>

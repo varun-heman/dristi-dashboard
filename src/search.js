@@ -252,30 +252,113 @@ function renderTable(sorted) {
     const logins   = (i.assignees||[]).map(a=>a.login);
     if (i.assignee?.login && !logins.includes(i.assignee.login)) logins.push(i.assignee.login);
     const assigneeHtml = logins.length
-      ? logins.map(l => `<span class="assignee-chip" onclick="filterByAssignee('${escHtml(l)}')" title="Filter by ${escHtml(l)}">${escHtml(l)}</span>`).join('')
-      : '<span class="assignee-chip assignee-none" onclick="filterByAssignee(\'__unassigned__\')" title="Filter unassigned">—</span>';
+      ? logins.map(l => `<span class="assignee-chip" onclick="event.stopPropagation();filterByAssignee('${escHtml(l)}')" title="Filter by ${escHtml(l)}">${escHtml(l)}</span>`).join('')
+      : `<span class="assignee-chip assignee-none" onclick="event.stopPropagation();filterByAssignee('__unassigned__')" title="Filter unassigned">—</span>`;
 
     const stateTag = i.state === 'open'
-      ? `<span class="state-open cf-cell" onclick="filterByState('open')" title="Filter: open">open</span>`
-      : `<span class="state-closed cf-cell" onclick="filterByState('closed')" title="Filter: closed">closed</span>`;
+      ? `<span class="state-open cf-cell" onclick="event.stopPropagation();filterByState('open')" title="Filter: open">open</span>`
+      : `<span class="state-closed cf-cell" onclick="event.stopPropagation();filterByState('closed')" title="Filter: closed">closed</span>`;
 
     const statusVal = i.project_status || '';
     const statusHtml = statusVal
-      ? `<span onclick="filterByStatus('${escHtml(statusVal)}')" title="Filter: ${escHtml(statusVal)}" class="cf-cell">${statusPill(statusVal)}</span>`
-      : `<span class="no-status-chip cf-cell" onclick="filterByStatus('__none__')" title="Filter: No status">—</span>`;
+      ? `<span onclick="event.stopPropagation();filterByStatus('${escHtml(statusVal)}')" title="Filter: ${escHtml(statusVal)}" class="cf-cell">${statusPill(statusVal)}</span>`
+      : `<span class="no-status-chip cf-cell" onclick="event.stopPropagation();filterByStatus('__none__')" title="Filter: No status">—</span>`;
 
-    const isActive = _sortKey === 'created_at';
-    const isActiveU = _sortKey === 'updated_at';
-    return `<tr>
-      <td class="num-col"><a href="https://github.com/pucardotorg/dristi/issues/${i.number}" target="_blank">#${i.number}</a></td>
-      <td class="title-col" title="${escHtml(i.title)}">${escHtml(i.title.slice(0,90))}${i.title.length>90?'…':''}</td>
+    const labels = (i.labels||[]).map(l=>l.name).join(', ') || '—';
+
+    // Encode row data for expand panel
+    const rowData = encodeURIComponent(JSON.stringify({
+      number: i.number, title: i.title, status: statusVal, state: i.state,
+      created: created, updated: updated, assignees: logins.join(', ') || '—', labels
+    }));
+
+    return `<tr onclick="toggleRowDetail(this,'${rowData}')" data-num="${i.number}">
+      <td class="num-col"><a href="https://github.com/pucardotorg/dristi/issues/${i.number}" target="_blank" onclick="event.stopPropagation()">#${i.number}</a></td>
+      <td class="title-col"><div class="title-clamp">${escHtml(i.title)}</div></td>
       <td>${statusHtml}</td>
       <td>${stateTag}</td>
-      <td class="date-col${isActive?' sort-col-active':''}">${created}</td>
-      <td class="date-col${isActiveU?' sort-col-active':''}">${updated}</td>
+      <td class="date-col">${created}</td>
+      <td class="date-col">${updated}</td>
       <td class="assignee-col">${assigneeHtml}</td>
     </tr>`;
   }).join('');
+
+  initColResize();
+}
+
+// ── Row expand / collapse ─────────────────────────────────────
+function toggleRowDetail(tr, encodedData) {
+  const num = tr.dataset.num;
+  const existing = document.getElementById(`detail-${num}`);
+  if (existing) {
+    existing.remove();
+    tr.classList.remove('row-expanded');
+    return;
+  }
+  tr.classList.add('row-expanded');
+  const d = JSON.parse(decodeURIComponent(encodedData));
+  const detailTr = document.createElement('tr');
+  detailTr.id = `detail-${num}`;
+  detailTr.className = 'detail-row';
+  detailTr.innerHTML = `<td colspan="7"><div class="detail-panel">
+    <div class="dp-full">${escHtml(d.title)}</div>
+    <div class="dp-meta">
+      <span class="dp-label">Status</span> ${d.status ? statusPill(d.status) : '<span style="color:#94a3b8">—</span>'}
+      <span class="dp-label" style="margin-left:8px">State</span>
+      ${d.state === 'open' ? '<span class="state-open">open</span>' : '<span class="state-closed">closed</span>'}
+    </div>
+    <div class="dp-meta">
+      <span class="dp-label">Created</span> ${escHtml(d.created)}
+      <span class="dp-label" style="margin-left:8px">Updated</span> ${escHtml(d.updated)}
+    </div>
+    <div class="dp-meta">
+      <span class="dp-label">Assignees</span> ${escHtml(d.assignees)}
+    </div>
+    <div class="dp-meta">
+      <span class="dp-label">Labels</span> <span style="color:#475569;font-size:11px">${escHtml(d.labels)}</span>
+    </div>
+    <div style="margin-top:4px">
+      <a href="https://github.com/pucardotorg/dristi/issues/${d.number}" target="_blank"
+         style="font-size:12px;font-weight:600;color:#2563eb" onclick="event.stopPropagation()">
+        Open #${d.number} on GitHub ↗
+      </a>
+    </div>
+  </div></td>`;
+  tr.insertAdjacentElement('afterend', detailTr);
+}
+
+// ── Drag-to-resize column handles ────────────────────────────
+function initColResize() {
+  const table = document.getElementById('issues-table');
+  if (!table) return;
+  // Remove existing handles to avoid duplicates on re-render
+  table.querySelectorAll('.col-resize-handle').forEach(h => h.remove());
+  const cols  = table.querySelectorAll('colgroup col');
+  const ths   = table.querySelectorAll('thead th');
+  ths.forEach((th, idx) => {
+    if (idx === ths.length - 1) return; // skip last col (auto width)
+    const handle = document.createElement('span');
+    handle.className = 'col-resize-handle';
+    th.appendChild(handle);
+    handle.addEventListener('mousedown', e => {
+      e.stopPropagation();
+      e.preventDefault();
+      handle.classList.add('resizing');
+      const startX = e.clientX;
+      const startW = th.offsetWidth;
+      const onMove = ev => {
+        const w = Math.max(50, startW + ev.clientX - startX);
+        if (cols[idx]) cols[idx].style.width = w + 'px';
+      };
+      const onUp = () => {
+        handle.classList.remove('resizing');
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+      };
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+  });
 }
 
 function escHtml(s) {
