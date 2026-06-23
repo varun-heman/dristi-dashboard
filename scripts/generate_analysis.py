@@ -20,7 +20,7 @@ if not OPENROUTER_KEY:
     sys.exit(0)
 
 OR_URL   = "https://openrouter.ai/api/v1/chat/completions"
-OR_MODEL = "anthropic/claude-3.5-haiku"
+OR_MODEL = "meta-llama/llama-3.1-8b-instruct:free"
 
 def build_context(issues):
     now    = datetime.now(timezone.utc)

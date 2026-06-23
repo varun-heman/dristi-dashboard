@@ -41,6 +41,7 @@ jobs:
 
       # ── 4. Generate AI analysis (key stays in GitHub Secrets) ──
       - name: Generate AI analysis
+        continue-on-error: true   # never block deploy if AI step fails
         env:
           OPENROUTER_KEY: ${{ secrets.OPENROUTER_KEY }}
         run: python scripts/generate_analysis.py

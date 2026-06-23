@@ -2,7 +2,7 @@
 
 // The Worker URL — update this after you deploy the Cloudflare Worker
 const WORKER_URL = 'https://dristi-ai.earthdb.workers.dev';
-const OR_MODEL   = 'anthropic/claude-3.5-haiku';
+const OR_MODEL   = 'meta-llama/llama-3.1-8b-instruct:free';
 const OR_URL     = WORKER_URL;   // all requests go through the proxy
 
 // ── Build context string from real issue data ─────────────────
@@ -105,6 +105,12 @@ async function runAnalysis() {
     if (!payload.analysis) {
       box.innerHTML = '<div style="color:#94a3b8;font-size:13px">No analysis available yet — run the workflow to generate it.</div>';
       return;
+    }
+
+    // Update model badge dynamically from the JSON
+    if (payload.model) {
+      const badge = document.getElementById('model-badge');
+      if (badge) badge.textContent = payload.model.split('/').pop() + ' · OpenRouter';
     }
 
     const ts = payload.generated_at
