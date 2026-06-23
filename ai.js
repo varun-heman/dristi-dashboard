@@ -2,7 +2,7 @@
 
 // The Worker URL — update this after you deploy the Cloudflare Worker
 const WORKER_URL = 'https://dristi-ai.earthdb.workers.dev';
-const OR_MODEL   = 'anthropic/claude-3.5-haiku';
+const OR_MODEL   = 'meta-llama/llama-3.1-8b-instruct:free';
 const OR_URL     = WORKER_URL;   // all requests go through the proxy
 
 // ── Build context string from real issue data ─────────────────
@@ -107,10 +107,22 @@ async function runAnalysis() {
       return;
     }
 
+    // Update model badge dynamically from the JSON
+    if (payload.model) {
+      const badge = document.getElementById('model-badge');
+      if (badge) badge.textContent = payload.model.split('/').pop() + ' · OpenRouter';
+    }
+
+    const staleWarning = payload.stale
+      ? `<div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:6px;padding:8px 12px;margin-bottom:12px;font-size:12px;color:#9a3412">
+           ⚠️ This analysis is from a previous run — the AI model failed to refresh it.
+         </div>`
+      : '';
+
     const ts = payload.generated_at
       ? `<div style="font-size:11px;color:#94a3b8;margin-bottom:8px">Generated ${new Date(payload.generated_at).toLocaleString('en-GB')} · ${payload.model}</div>`
       : '';
-    box.innerHTML = ts + markdownToHtml(payload.analysis);
+    box.innerHTML = staleWarning + ts + markdownToHtml(payload.analysis);
 
     // Build context for chat from live issue data
     if (typeof _issuesData !== 'undefined' && _issuesData.length) {
