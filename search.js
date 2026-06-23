@@ -8,6 +8,7 @@ let _page       = 1;
 const PAGE_SIZE = 50;
 let _searchTimer;
 let _timelineChart;
+let _staleOnly  = false;       // extra stale filter from quick presets
 
 // ── Entry point (called from dashboard.js after data loads) ──
 function initSearch(issues) {
@@ -62,34 +63,117 @@ function applyFilters() {
   const severity = document.getElementById('f-severity')?.value || '';
   const label    = document.getElementById('f-label').value;
   const assignee = document.getElementById('f-assignee').value;
-  const period   = parseInt(document.getElementById('f-period').value) || 0;
-  const cutoff   = period ? new Date(Date.now() - period * 86400000) : null;
+  const dateFrom = document.getElementById('f-date-from')?.value;
+  const dateTo   = document.getElementById('f-date-to')?.value;
+  const fromTs   = dateFrom ? new Date(dateFrom).getTime() : null;
+  const toTs     = dateTo   ? new Date(dateTo + 'T23:59:59').getTime() : null;
+  const now      = Date.now();
 
   _filtered = _allIssues.filter(i => {
     if (i.pull_request) return false;
     if (q && !i.title.toLowerCase().includes(q) && !String(i.number).includes(q)) return false;
     if (state && i.state !== state) return false;
-    if (status && i.project_status !== status) return false;
+    if (status === '__none__') { if (i.project_status) return false; }
+    else if (status && i.project_status !== status) return false;
     if (severity && !i.labels.some(l => l.name === severity)) return false;
     if (label && !i.labels.some(l => l.name === label)) return false;
-    if (assignee && !(i.assignees||[]).some(a => a.login === assignee) && i.assignee?.login !== assignee) return false;
-    if (cutoff && new Date(i.created_at) < cutoff) return false;
+    if (assignee === '__unassigned__') {
+      if ((i.assignees||[]).length > 0 || i.assignee?.login) return false;
+    } else if (assignee) {
+      if (!(i.assignees||[]).some(a => a.login === assignee) && i.assignee?.login !== assignee) return false;
+    }
+    if (fromTs && new Date(i.created_at).getTime() < fromTs) return false;
+    if (toTs   && new Date(i.created_at).getTime() > toTs)   return false;
+    if (_staleOnly) {
+      const daysSinceUpdate = (now - new Date(i.updated_at).getTime()) / 86400000;
+      if (i.state !== 'open' || daysSinceUpdate < 30) return false;
+    }
     return true;
   });
 
   _page = 1;
   document.getElementById('results-count').textContent = `${_filtered.length.toLocaleString()} results`;
+  renderActiveFilters(q, state, status, severity, label, assignee, dateFrom, dateTo);
   sortAndRender();
 }
 
-function clearFilters() {
-  document.getElementById('search-q').value = '';
-  document.getElementById('f-state').value  = '';
-  document.getElementById('f-status').value = '';
+// ── Active filter chips ────────────────────────────────────────
+function renderActiveFilters(q, state, status, severity, label, assignee, dateFrom, dateTo) {
+  const bar = document.getElementById('active-filters');
+  if (!bar) return;
+  const chips = [];
+  if (q)        chips.push([`"${q}"`,     () => { document.getElementById('search-q').value = ''; applyFilters(); }]);
+  if (state)    chips.push([state,         () => { document.getElementById('f-state').value = ''; applyFilters(); }]);
+  if (status === '__none__') chips.push(['No Status', () => { document.getElementById('f-status').value = ''; applyFilters(); }]);
+  else if (status) chips.push([status,    () => { document.getElementById('f-status').value = ''; applyFilters(); }]);
+  if (severity) chips.push([severity.replace('severity/',''), () => { document.getElementById('f-severity').value = ''; applyFilters(); }]);
+  if (label)    chips.push([label,        () => { document.getElementById('f-label').value = ''; applyFilters(); }]);
+  if (assignee === '__unassigned__') chips.push(['Unassigned', () => { document.getElementById('f-assignee').value = ''; applyFilters(); }]);
+  else if (assignee) chips.push([assignee, () => { document.getElementById('f-assignee').value = ''; applyFilters(); }]);
+  if (dateFrom) chips.push([`from ${dateFrom}`, () => { document.getElementById('f-date-from').value = ''; applyFilters(); }]);
+  if (dateTo)   chips.push([`to ${dateTo}`,    () => { document.getElementById('f-date-to').value = ''; applyFilters(); }]);
+  if (_staleOnly) chips.push(['Stale 30d+', () => { _staleOnly = false; setActiveQuickBtn('all'); applyFilters(); }]);
+  if (chips.length === 0) { bar.style.display = 'none'; return; }
+  bar.style.display = 'flex';
+  bar.innerHTML = '<span style="font-size:11px;color:#94a3b8;margin-right:2px;white-space:nowrap">Active:</span>' +
+    chips.map((c, idx) =>
+      `<button class="af-chip" onclick="_afRemove(${idx})">${escHtml(c[0])} ×</button>`
+    ).join('');
+  bar._removers = chips.map(c => c[1]);
+}
+
+function _afRemove(idx) {
+  const bar = document.getElementById('active-filters');
+  if (bar && bar._removers && bar._removers[idx]) bar._removers[idx]();
+}
+
+// ── Quick filter presets ───────────────────────────────────────
+function quickFilter(preset) {
+  document.getElementById('search-q').value   = '';
+  document.getElementById('f-state').value    = '';
+  document.getElementById('f-status').value   = '';
   const fs = document.getElementById('f-severity'); if (fs) fs.value = '';
-  document.getElementById('f-label').value  = '';
+  document.getElementById('f-label').value    = '';
   document.getElementById('f-assignee').value = '';
-  document.getElementById('f-period').value = '';
+  const df = document.getElementById('f-date-from'); if (df) df.value = '';
+  const dt = document.getElementById('f-date-to');   if (dt) dt.value = '';
+  _staleOnly = false;
+
+  if (preset === 'showstoppers') {
+    document.getElementById('f-state').value    = 'open';
+    if (document.getElementById('f-severity')) document.getElementById('f-severity').value = 'severity/showstopper';
+  } else if (preset === 'stale') {
+    _staleOnly = true;
+  } else if (preset === 'unassigned') {
+    document.getElementById('f-state').value    = 'open';
+    document.getElementById('f-assignee').value = '__unassigned__';
+  } else if (preset === 'nostatus') {
+    document.getElementById('f-state').value  = 'open';
+    document.getElementById('f-status').value = '__none__';
+  }
+
+  setActiveQuickBtn(preset);
+  applyFilters();
+}
+
+function setActiveQuickBtn(preset) {
+  ['all','showstoppers','stale','unassigned','nostatus'].forEach(id => {
+    const el = document.getElementById(`qf-${id}`);
+    if (el) el.classList.toggle('qf-active', id === preset);
+  });
+}
+
+function clearFilters() {
+  _staleOnly = false;
+  document.getElementById('search-q').value   = '';
+  document.getElementById('f-state').value    = '';
+  document.getElementById('f-status').value   = '';
+  const fs = document.getElementById('f-severity'); if (fs) fs.value = '';
+  document.getElementById('f-label').value    = '';
+  document.getElementById('f-assignee').value = '';
+  const df = document.getElementById('f-date-from'); if (df) df.value = '';
+  const dt = document.getElementById('f-date-to');   if (dt) dt.value = '';
+  setActiveQuickBtn('all');
   applyFilters();
 }
 

@@ -2,7 +2,7 @@
 
 // The Worker URL — update this after you deploy the Cloudflare Worker
 const WORKER_URL = 'https://dristi-ai.earthdb.workers.dev';
-const OR_MODEL   = 'deepseek/deepseek-r1:free';
+const OR_MODEL   = 'meta-llama/llama-3.1-8b-instruct:free';  // confirmed working on OpenRouter free tier
 const OR_URL     = WORKER_URL;   // all requests go through the proxy
 
 // ── Build context string from real issue data ─────────────────
