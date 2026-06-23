@@ -56,9 +56,13 @@ jobs:
           # Copy static assets
           cp -r src/* dist/
 
-          # Copy fetched data + AI analysis
+          # Copy fetched data + AI analysis (fallback to empty if analysis missing)
           cp data/issues.json dist/data/issues.json
-          cp data/analysis.json dist/data/analysis.json
+          if [ -f data/analysis.json ]; then
+            cp data/analysis.json dist/data/analysis.json
+          else
+            echo '{"generated_at":null,"model":null,"analysis":null,"stale":true,"stale_reason":"analysis.json not found"}' > dist/data/analysis.json
+          fi
 
           echo "Build complete. Files in dist/:"
           ls -lh dist/
