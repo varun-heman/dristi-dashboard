@@ -19,18 +19,41 @@ if not OPENROUTER_KEY:
         json.dump({"generated_at": None, "analysis": None}, f)
     sys.exit(0)
 
-OR_URL  = "https://openrouter.ai/api/v1/chat/completions"
+OR_URL      = "https://openrouter.ai/api/v1/chat/completions"
+OR_MODELS_URL = "https://openrouter.ai/api/v1/models"
 
-# Free models to try in order — first one that works wins.
-# Verified against OpenRouter /api/v1/models as of June 2025.
-OR_MODELS = [
-    "meta-llama/llama-3.3-70b-instruct:free",   # confirmed reachable (429 = rate-limited, not 404)
-    "meta-llama/llama-3.1-8b-instruct:free",
-    "google/gemma-2-9b-it:free",
-    "microsoft/phi-3-mini-128k-instruct:free",
-    "deepseek/deepseek-chat-v3-0324:free",
-    "nousresearch/hermes-3-llama-3.1-8b:free",
+# Hardcoded fallback in case the models API is unreachable
+OR_MODELS_FALLBACK = [
+    "meta-llama/llama-3.3-70b-instruct:free",
 ]
+
+# Preferred model name fragments — we rank by first match
+OR_PREFERRED = ["llama-3.3", "llama-3.1", "gemma", "gemini", "deepseek", "qwen", "mistral", "phi"]
+
+
+def fetch_free_models():
+    """Fetch the live list of :free models from OpenRouter and return sorted by preference."""
+    try:
+        resp = requests.get(OR_MODELS_URL, timeout=15)
+        resp.raise_for_status()
+        all_models = resp.json().get("data", [])
+        free = [m["id"] for m in all_models if ":free" in m.get("id", "")]
+        if not free:
+            print("  No free models found in API response; using fallback.")
+            return OR_MODELS_FALLBACK
+
+        def rank(mid):
+            for i, frag in enumerate(OR_PREFERRED):
+                if frag in mid:
+                    return i
+            return len(OR_PREFERRED)
+
+        free.sort(key=rank)
+        print(f"  Found {len(free)} free models: {', '.join(free[:6])}{'…' if len(free)>6 else ''}")
+        return free
+    except Exception as e:
+        print(f"  Could not fetch model list ({e}); using fallback.")
+        return OR_MODELS_FALLBACK
 
 def build_context(issues):
     now    = datetime.now(timezone.utc)
@@ -139,6 +162,7 @@ Be concise and direct. Focus on what matters most for a small engineering team."
     last_error    = None
 
     import time
+    OR_MODELS = fetch_free_models()
     for model in OR_MODELS:
         try:
             print(f"Trying model: {model}…")
