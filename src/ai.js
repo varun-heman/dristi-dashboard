@@ -113,10 +113,16 @@ async function runAnalysis() {
       if (badge) badge.textContent = payload.model.split('/').pop() + ' · OpenRouter';
     }
 
+    const staleWarning = payload.stale
+      ? `<div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:6px;padding:8px 12px;margin-bottom:12px;font-size:12px;color:#9a3412">
+           ⚠️ This analysis is from a previous run — the AI model failed to refresh it.
+         </div>`
+      : '';
+
     const ts = payload.generated_at
       ? `<div style="font-size:11px;color:#94a3b8;margin-bottom:8px">Generated ${new Date(payload.generated_at).toLocaleString('en-GB')} · ${payload.model}</div>`
       : '';
-    box.innerHTML = ts + markdownToHtml(payload.analysis);
+    box.innerHTML = staleWarning + ts + markdownToHtml(payload.analysis);
 
     // Build context for chat from live issue data
     if (typeof _issuesData !== 'undefined' && _issuesData.length) {

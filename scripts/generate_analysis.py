@@ -89,10 +89,20 @@ Open Showstoppers: {len(ss)}
     return ctx.strip()
 
 
+def load_previous(out_path):
+    """Return the previous analysis.json content, or {} if not available."""
+    try:
+        with open(out_path) as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
 def main():
     data_dir  = os.path.join(os.path.dirname(__file__), "..", "data")
     in_path   = os.path.join(data_dir, "issues.json")
     out_path  = os.path.join(data_dir, "analysis.json")
+
+    previous = load_previous(out_path)
 
     with open(in_path) as f:
         payload = json.load(f)
@@ -114,22 +124,33 @@ Please provide:
 
 Be concise and direct. Focus on what matters most for a small engineering team."""
 
-    print("Calling OpenRouter for AI analysis…")
-    resp = requests.post(
-        OR_URL,
-        headers={"Authorization": f"Bearer {OPENROUTER_KEY}", "Content-Type": "application/json"},
-        json={"model": OR_MODEL, "messages": [{"role": "user", "content": prompt}], "max_tokens": 1200},
-        timeout=60,
-    )
-    resp.raise_for_status()
-    analysis_text = resp.json()["choices"][0]["message"]["content"]
-    print(f"  Analysis generated ({len(analysis_text)} chars).")
+    try:
+        print("Calling OpenRouter for AI analysis…")
+        resp = requests.post(
+            OR_URL,
+            headers={"Authorization": f"Bearer {OPENROUTER_KEY}", "Content-Type": "application/json"},
+            json={"model": OR_MODEL, "messages": [{"role": "user", "content": prompt}], "max_tokens": 1200},
+            timeout=60,
+        )
+        resp.raise_for_status()
+        analysis_text = resp.json()["choices"][0]["message"]["content"]
+        print(f"  Analysis generated ({len(analysis_text)} chars).")
 
-    output = {
-        "generated_at": datetime.now(timezone.utc).isoformat(),
-        "model": OR_MODEL,
-        "analysis": analysis_text,
-    }
+        output = {
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "model":        OR_MODEL,
+            "analysis":     analysis_text,
+            "stale":        False,
+        }
+    except Exception as e:
+        print(f"  WARNING: AI analysis failed — {e}", file=sys.stderr)
+        print(f"  Preserving previous analysis with stale=true.")
+        output = {
+            **previous,
+            "stale":       True,
+            "stale_reason": str(e),
+        }
+
     with open(out_path, "w") as f:
         json.dump(output, f, indent=2)
     print(f"  Written to {out_path}")

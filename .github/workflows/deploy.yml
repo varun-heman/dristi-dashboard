@@ -32,6 +32,8 @@ jobs:
           mkdir -p data
           curl -sf "https://varun-heman.github.io/dristi-dashboard/data/issues.json" \
             -o data/issues.json && echo "  Cache restored." || echo "  No cache found — will do full fetch."
+          curl -sf "https://varun-heman.github.io/dristi-dashboard/data/analysis.json" \
+            -o data/analysis.json && echo "  Analysis cache restored." || echo "  No analysis cache found."
 
       # ── 4. Fetch only new/updated issues ────────────────────
       - name: Fetch issues data
