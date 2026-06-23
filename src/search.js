@@ -17,6 +17,7 @@ function initSearch(issues) {
 
   document.getElementById('search-total').textContent = issues.length.toLocaleString();
   populateFilterDropdowns(issues);
+  renderTableHeaders();
   applyFilters();
 }
 
@@ -188,16 +189,55 @@ function sortAndRender() {
   const sorted = [..._filtered].sort((a, b) => {
     let av = a[_sortKey] ?? '';
     let bv = b[_sortKey] ?? '';
-    if (_sortKey === 'assignee') { av = a.assignee?.login ?? ''; bv = b.assignee?.login ?? ''; }
+    if (_sortKey === 'assignee') { av = (a.assignees||[]).map(x=>x.login).join(',') || a.assignee?.login || ''; bv = (b.assignees||[]).map(x=>x.login).join(',') || b.assignee?.login || ''; }
     if (typeof av === 'number') return (av - bv) * _sortDir;
     return String(av).localeCompare(String(bv)) * _sortDir;
   });
 
+  renderTableHeaders();
   renderTable(sorted);
   renderPagination(sorted.length);
 
   const view = document.getElementById('view-timeline').style.display;
   if (view !== 'none') renderTimeline(sorted);
+}
+
+// ── Column header sort arrows ─────────────────────────────────
+const COL_KEYS = ['number','title','project_status','state','created_at','updated_at','assignee'];
+function renderTableHeaders() {
+  const ths = document.querySelectorAll('.issues-table thead th');
+  ths.forEach((th, idx) => {
+    const key = COL_KEYS[idx];
+    if (!key) return;
+    // Strip any previous arrow
+    th.dataset.sortKey = key;
+    const base = th.dataset.label || th.textContent.replace(/[▲▼⇅]/g,'').trim();
+    th.dataset.label = base;
+    if (key === _sortKey) {
+      th.innerHTML = `${base} <span class="sort-arrow">${_sortDir === -1 ? '▼' : '▲'}</span>`;
+      th.classList.add('sort-active');
+    } else {
+      th.innerHTML = `${base} <span class="sort-arrow sort-idle">⇅</span>`;
+      th.classList.remove('sort-active');
+    }
+  });
+}
+
+// ── Quick-filter helpers (called from table cells) ────────────
+function filterByStatus(val) {
+  document.getElementById('f-status').value = val || '';
+  setActiveQuickBtn('all');
+  applyFilters();
+}
+function filterByState(val) {
+  document.getElementById('f-state').value = val || '';
+  setActiveQuickBtn('all');
+  applyFilters();
+}
+function filterByAssignee(val) {
+  document.getElementById('f-assignee').value = val || '';
+  setActiveQuickBtn('all');
+  applyFilters();
 }
 
 // ── Table ─────────────────────────────────────────────────────
@@ -207,20 +247,33 @@ function renderTable(sorted) {
   const tbody  = document.getElementById('issues-tbody');
 
   tbody.innerHTML = page.map(i => {
-    const created = new Date(i.created_at).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'2-digit'});
-    const updated = new Date(i.updated_at).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'2-digit'});
-    const assignees = (i.assignees||[]).map(a=>a.login).join(', ') || '—';
+    const created  = new Date(i.created_at).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'2-digit'});
+    const updated  = new Date(i.updated_at).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'2-digit'});
+    const logins   = (i.assignees||[]).map(a=>a.login);
+    if (i.assignee?.login && !logins.includes(i.assignee.login)) logins.push(i.assignee.login);
+    const assigneeHtml = logins.length
+      ? logins.map(l => `<span class="assignee-chip" onclick="filterByAssignee('${escHtml(l)}')" title="Filter by ${escHtml(l)}">${escHtml(l)}</span>`).join('')
+      : '<span class="assignee-chip assignee-none" onclick="filterByAssignee(\'__unassigned__\')" title="Filter unassigned">—</span>';
+
     const stateTag = i.state === 'open'
-      ? `<span class="state-open">open</span>`
-      : `<span class="state-closed">closed</span>`;
+      ? `<span class="state-open cf-cell" onclick="filterByState('open')" title="Filter: open">open</span>`
+      : `<span class="state-closed cf-cell" onclick="filterByState('closed')" title="Filter: closed">closed</span>`;
+
+    const statusVal = i.project_status || '';
+    const statusHtml = statusVal
+      ? `<span onclick="filterByStatus('${escHtml(statusVal)}')" title="Filter: ${escHtml(statusVal)}" class="cf-cell">${statusPill(statusVal)}</span>`
+      : `<span class="no-status-chip cf-cell" onclick="filterByStatus('__none__')" title="Filter: No status">—</span>`;
+
+    const isActive = _sortKey === 'created_at';
+    const isActiveU = _sortKey === 'updated_at';
     return `<tr>
       <td class="num-col"><a href="https://github.com/pucardotorg/dristi/issues/${i.number}" target="_blank">#${i.number}</a></td>
-      <td class="title-col">${escHtml(i.title.slice(0,80))}${i.title.length>80?'…':''}</td>
-      <td>${statusPill(i.project_status)}</td>
+      <td class="title-col" title="${escHtml(i.title)}">${escHtml(i.title.slice(0,90))}${i.title.length>90?'…':''}</td>
+      <td>${statusHtml}</td>
       <td>${stateTag}</td>
-      <td class="date-col">${created}</td>
-      <td class="date-col">${updated}</td>
-      <td class="assignee-col">${escHtml(assignees)}</td>
+      <td class="date-col${isActive?' sort-col-active':''}">${created}</td>
+      <td class="date-col${isActiveU?' sort-col-active':''}">${updated}</td>
+      <td class="assignee-col">${assigneeHtml}</td>
     </tr>`;
   }).join('');
 }
