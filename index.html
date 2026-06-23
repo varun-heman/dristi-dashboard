@@ -166,31 +166,13 @@
       <button class="btn-sm" onclick="clearFilters()">✕ Clear all</button>
     </div>
     <div class="search-toolbar-filters">
-      <select id="f-state" onchange="applyFilters()">
-        <option value="">All states</option>
-        <option value="open">Open</option>
-        <option value="closed">Closed</option>
-      </select>
-      <select id="f-status" onchange="applyFilters()">
-        <option value="">All project statuses</option>
-        <option value="__none__">— No status</option>
-      </select>
-      <select id="f-severity" onchange="applyFilters()">
-        <option value="">All severities</option>
-        <option value="severity/showstopper">Showstopper</option>
-        <option value="severity/high">High</option>
-        <option value="severity/medium">Medium</option>
-        <option value="severity/low">Low</option>
-      </select>
-      <select id="f-label" onchange="applyFilters()">
-        <option value="">All labels</option>
-      </select>
-      <select id="f-assignee" onchange="applyFilters()">
-        <option value="">All assignees</option>
-        <option value="__unassigned__">— Unassigned</option>
-      </select>
+      <div id="ms-state"    class="ms-wrap"></div>
+      <div id="ms-status"   class="ms-wrap ms-wide"></div>
+      <div id="ms-severity" class="ms-wrap"></div>
+      <div id="ms-label"    class="ms-wrap ms-wide"></div>
+      <div id="ms-assignee" class="ms-wrap ms-wide"></div>
       <label class="date-range-label">From <input type="date" id="f-date-from" onchange="applyFilters()" /></label>
-      <label class="date-range-label">To <input type="date" id="f-date-to"   onchange="applyFilters()" /></label>
+      <label class="date-range-label">To   <input type="date" id="f-date-to"   onchange="applyFilters()" /></label>
     </div>
     <!-- Active filter chips -->
     <div class="active-filters" id="active-filters" style="display:none"></div>
@@ -200,7 +182,16 @@
   <div id="view-table">
     <div class="card" style="padding:0;overflow:hidden">
       <div class="issues-table-wrap">
-        <table class="issues-table">
+        <table class="issues-table" id="issues-table">
+          <colgroup>
+            <col id="col-num"      style="width:62px">
+            <col id="col-title"    style="width:38%">
+            <col id="col-status"   style="width:120px">
+            <col id="col-state"    style="width:88px">
+            <col id="col-created"  style="width:100px">
+            <col id="col-updated"  style="width:100px">
+            <col id="col-assignee" style="width:auto">
+          </colgroup>
           <thead>
             <tr>
               <th onclick="sortBy('number')">#</th>

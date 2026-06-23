@@ -21,33 +21,152 @@ function initSearch(issues) {
   applyFilters();
 }
 
-// ── Populate filter <select> options ─────────────────────────
-function populateFilterDropdowns(issues) {
-  // Statuses
-  const statuses = [...new Set(issues.map(i => i.project_status).filter(Boolean))].sort();
-  const fStatus = document.getElementById('f-status');
-  statuses.forEach(s => {
-    const o = document.createElement('option'); o.value = s; o.textContent = s; fStatus.appendChild(o);
-  });
+// ════════════════════════════════════════════════════════════
+//  Multi-select dropdown component
+// ════════════════════════════════════════════════════════════
 
-  // Labels
+function buildMultiSelect(id, placeholder, options, searchable) {
+  const wrap = document.getElementById(id);
+  if (!wrap) return;
+  wrap.dataset.placeholder = placeholder;
+  const searchRow = searchable
+    ? `<div class="ms-search-row"><input class="ms-search" type="text" placeholder="Search…" oninput="filterMsOptions('${id}',this.value)"></div>`
+    : '';
+  wrap.innerHTML = `
+    <button class="ms-trigger" type="button" onclick="toggleMs('${id}')">
+      <span class="ms-label">${placeholder}</span>
+      <span class="ms-arrow">▾</span>
+    </button>
+    <div class="ms-dropdown">
+      ${searchRow}
+      <div class="ms-options">
+        ${options.map(o =>
+          `<label class="ms-option"><input type="checkbox" value="${escHtml(o.value)}"><span>${escHtml(o.label)}</span></label>`
+        ).join('')}
+      </div>
+      <div class="ms-footer">
+        <button class="ms-clear-btn" type="button" onclick="clearMs('${id}')">Clear</button>
+      </div>
+    </div>`;
+  wrap.querySelectorAll('input[type=checkbox]').forEach(cb => {
+    cb.addEventListener('change', () => { updateMsTrigger(id); applyFilters(); });
+  });
+}
+
+function toggleMs(id) {
+  const wrap = document.getElementById(id);
+  const dd   = wrap?.querySelector('.ms-dropdown');
+  const btn  = wrap?.querySelector('.ms-trigger');
+  if (!dd) return;
+  const opening = !dd.classList.contains('open');
+  // Close all
+  document.querySelectorAll('.ms-dropdown.open').forEach(d => d.classList.remove('open'));
+  document.querySelectorAll('.ms-trigger.ms-open').forEach(b => b.classList.remove('ms-open'));
+  if (opening) { dd.classList.add('open'); btn.classList.add('ms-open'); }
+}
+
+function getMs(id) {
+  const wrap = document.getElementById(id);
+  if (!wrap) return [];
+  return [...wrap.querySelectorAll('input[type=checkbox]:checked')].map(cb => cb.value);
+}
+
+function setMs(id, values) {
+  const wrap = document.getElementById(id);
+  if (!wrap) return;
+  wrap.querySelectorAll('input[type=checkbox]').forEach(cb => {
+    cb.checked = values.includes(cb.value);
+  });
+  updateMsTrigger(id);
+}
+
+function clearMs(id) {
+  setMs(id, []);
+  applyFilters();
+}
+
+function updateMsTrigger(id) {
+  const wrap = document.getElementById(id);
+  if (!wrap) return;
+  const selected = getMs(id);
+  const label    = wrap.querySelector('.ms-label');
+  const btn      = wrap.querySelector('.ms-trigger');
+  const ph       = wrap.dataset.placeholder || '';
+  if (selected.length === 0) {
+    label.textContent = ph;
+    btn.classList.remove('ms-has-value');
+  } else if (selected.length === 1) {
+    // Show the label text (strip special prefixes for display)
+    const optEl = wrap.querySelector(`input[value="${CSS.escape(selected[0])}"]`);
+    label.textContent = optEl ? optEl.nextElementSibling?.textContent || selected[0] : selected[0];
+    btn.classList.add('ms-has-value');
+  } else {
+    label.textContent = `${selected.length} selected`;
+    btn.classList.add('ms-has-value');
+  }
+}
+
+function filterMsOptions(id, q) {
+  const wrap = document.getElementById(id);
+  if (!wrap) return;
+  const lq = q.toLowerCase();
+  wrap.querySelectorAll('.ms-option').forEach(opt => {
+    const txt = opt.textContent.toLowerCase();
+    opt.style.display = txt.includes(lq) ? '' : 'none';
+  });
+}
+
+// Close dropdowns when clicking outside
+document.addEventListener('click', e => {
+  if (!e.target.closest('.ms-wrap')) {
+    document.querySelectorAll('.ms-dropdown.open').forEach(d => d.classList.remove('open'));
+    document.querySelectorAll('.ms-trigger.ms-open').forEach(b => b.classList.remove('ms-open'));
+  }
+});
+
+// ── Build all filter dropdowns from issue data ─────────────────
+function populateFilterDropdowns(issues) {
+  // State (static)
+  buildMultiSelect('ms-state', 'All states', [
+    { value: 'open',   label: '● Open'   },
+    { value: 'closed', label: '● Closed' },
+  ], false);
+
+  // Project status (dynamic)
+  const statuses = [...new Set(issues.map(i => i.project_status).filter(Boolean))].sort();
+  buildMultiSelect('ms-status', 'All project statuses',
+    [{ value: '__none__', label: '— No status' }, ...statuses.map(s => ({ value: s, label: s }))],
+    statuses.length > 6
+  );
+
+  // Severity (static)
+  buildMultiSelect('ms-severity', 'All severities', [
+    { value: 'severity/showstopper', label: 'Showstopper' },
+    { value: 'severity/high',        label: 'High'        },
+    { value: 'severity/medium',      label: 'Medium'      },
+    { value: 'severity/low',         label: 'Low'         },
+  ], false);
+
+  // Labels (dynamic)
   const labelSet = {};
   issues.forEach(i => i.labels.forEach(l => { labelSet[l.name] = true; }));
-  const fLabel = document.getElementById('f-label');
-  Object.keys(labelSet).sort().forEach(name => {
-    const o = document.createElement('option'); o.value = name; o.textContent = name; fLabel.appendChild(o);
-  });
+  const labelNames = Object.keys(labelSet).sort();
+  buildMultiSelect('ms-label', 'All labels',
+    labelNames.map(n => ({ value: n, label: n })),
+    labelNames.length > 8
+  );
 
-  // Assignees — check both assignees[] array and singular assignee field
+  // Assignees (dynamic)
   const assigneeSet = {};
   issues.forEach(i => {
     (i.assignees || []).forEach(a => { assigneeSet[a.login] = true; });
     if (i.assignee?.login) assigneeSet[i.assignee.login] = true;
   });
-  const fAssignee = document.getElementById('f-assignee');
-  Object.keys(assigneeSet).sort().forEach(login => {
-    const o = document.createElement('option'); o.value = login; o.textContent = login; fAssignee.appendChild(o);
-  });
+  const logins = Object.keys(assigneeSet).sort();
+  buildMultiSelect('ms-assignee', 'All assignees',
+    [{ value: '__unassigned__', label: '— Unassigned' }, ...logins.map(l => ({ value: l, label: l }))],
+    logins.length > 8
+  );
 }
 
 // ── Debounced text search ─────────────────────────────────────
@@ -58,30 +177,34 @@ function debounceSearch() {
 
 // ── Apply all filters ─────────────────────────────────────────
 function applyFilters() {
-  const q        = (document.getElementById('search-q').value || '').toLowerCase().trim();
-  const state    = document.getElementById('f-state').value;
-  const status   = document.getElementById('f-status').value;
-  const severity = document.getElementById('f-severity')?.value || '';
-  const label    = document.getElementById('f-label').value;
-  const assignee = document.getElementById('f-assignee').value;
-  const dateFrom = document.getElementById('f-date-from')?.value;
-  const dateTo   = document.getElementById('f-date-to')?.value;
-  const fromTs   = dateFrom ? new Date(dateFrom).getTime() : null;
-  const toTs     = dateTo   ? new Date(dateTo + 'T23:59:59').getTime() : null;
-  const now      = Date.now();
+  const q          = (document.getElementById('search-q').value || '').toLowerCase().trim();
+  const states     = getMs('ms-state');
+  const statuses   = getMs('ms-status');
+  const severities = getMs('ms-severity');
+  const labels     = getMs('ms-label');
+  const assignees  = getMs('ms-assignee');
+  const dateFrom   = document.getElementById('f-date-from')?.value;
+  const dateTo     = document.getElementById('f-date-to')?.value;
+  const fromTs     = dateFrom ? new Date(dateFrom).getTime() : null;
+  const toTs       = dateTo   ? new Date(dateTo + 'T23:59:59').getTime() : null;
+  const now        = Date.now();
 
   _filtered = _allIssues.filter(i => {
     if (i.pull_request) return false;
     if (q && !i.title.toLowerCase().includes(q) && !String(i.number).includes(q)) return false;
-    if (state && i.state !== state) return false;
-    if (status === '__none__') { if (i.project_status) return false; }
-    else if (status && i.project_status !== status) return false;
-    if (severity && !i.labels.some(l => l.name === severity)) return false;
-    if (label && !i.labels.some(l => l.name === label)) return false;
-    if (assignee === '__unassigned__') {
-      if ((i.assignees||[]).length > 0 || i.assignee?.login) return false;
-    } else if (assignee) {
-      if (!(i.assignees||[]).some(a => a.login === assignee) && i.assignee?.login !== assignee) return false;
+    if (states.length && !states.includes(i.state)) return false;
+    if (statuses.length) {
+      const hasNone = statuses.includes('__none__');
+      const realSt  = statuses.filter(s => s !== '__none__');
+      if (!( (hasNone && !i.project_status) || realSt.some(s => s === i.project_status) )) return false;
+    }
+    if (severities.length && !i.labels.some(l => severities.includes(l.name))) return false;
+    if (labels.length && !i.labels.some(l => labels.includes(l.name))) return false;
+    if (assignees.length) {
+      const hasUnassigned = assignees.includes('__unassigned__');
+      const realA  = assignees.filter(a => a !== '__unassigned__');
+      const logins = [...(i.assignees||[]).map(a => a.login), ...(i.assignee?.login ? [i.assignee.login] : [])];
+      if (!( (hasUnassigned && logins.length === 0) || realA.some(a => logins.includes(a)) )) return false;
     }
     if (fromTs && new Date(i.created_at).getTime() < fromTs) return false;
     if (toTs   && new Date(i.created_at).getTime() > toTs)   return false;
@@ -94,89 +217,71 @@ function applyFilters() {
 
   _page = 1;
   document.getElementById('results-count').textContent = `${_filtered.length.toLocaleString()} results`;
-  renderActiveFilters(q, state, status, severity, label, assignee, dateFrom, dateTo);
+  renderActiveFilters(q, states, statuses, severities, labels, assignees, dateFrom, dateTo);
   sortAndRender();
 }
 
 // ── Active filter chips ────────────────────────────────────────
-function renderActiveFilters(q, state, status, severity, label, assignee, dateFrom, dateTo) {
+function renderActiveFilters(q, states, statuses, severities, labels, assignees, dateFrom, dateTo) {
   const bar = document.getElementById('active-filters');
   if (!bar) return;
   const chips = [];
-  if (q)        chips.push([`"${q}"`,     () => { document.getElementById('search-q').value = ''; applyFilters(); }]);
-  if (state)    chips.push([state,         () => { document.getElementById('f-state').value = ''; applyFilters(); }]);
-  if (status === '__none__') chips.push(['No Status', () => { document.getElementById('f-status').value = ''; applyFilters(); }]);
-  else if (status) chips.push([status,    () => { document.getElementById('f-status').value = ''; applyFilters(); }]);
-  if (severity) chips.push([severity.replace('severity/',''), () => { document.getElementById('f-severity').value = ''; applyFilters(); }]);
-  if (label)    chips.push([label,        () => { document.getElementById('f-label').value = ''; applyFilters(); }]);
-  if (assignee === '__unassigned__') chips.push(['Unassigned', () => { document.getElementById('f-assignee').value = ''; applyFilters(); }]);
-  else if (assignee) chips.push([assignee, () => { document.getElementById('f-assignee').value = ''; applyFilters(); }]);
+  if (q) chips.push([`"${q}"`, () => { document.getElementById('search-q').value = ''; applyFilters(); }]);
+  states.forEach(v     => chips.push([v, () => { setMs('ms-state', getMs('ms-state').filter(x=>x!==v)); applyFilters(); }]));
+  statuses.forEach(v   => { const lbl = v === '__none__' ? 'No Status' : v; chips.push([lbl, () => { setMs('ms-status', getMs('ms-status').filter(x=>x!==v)); applyFilters(); }]); });
+  severities.forEach(v => chips.push([v.replace('severity/',''), () => { setMs('ms-severity', getMs('ms-severity').filter(x=>x!==v)); applyFilters(); }]));
+  labels.forEach(v     => chips.push([v, () => { setMs('ms-label', getMs('ms-label').filter(x=>x!==v)); applyFilters(); }]));
+  assignees.forEach(v  => { const lbl = v === '__unassigned__' ? 'Unassigned' : v; chips.push([lbl, () => { setMs('ms-assignee', getMs('ms-assignee').filter(x=>x!==v)); applyFilters(); }]); });
   if (dateFrom) chips.push([`from ${dateFrom}`, () => { document.getElementById('f-date-from').value = ''; applyFilters(); }]);
-  if (dateTo)   chips.push([`to ${dateTo}`,    () => { document.getElementById('f-date-to').value = ''; applyFilters(); }]);
+  if (dateTo)   chips.push([`to ${dateTo}`,     () => { document.getElementById('f-date-to').value   = ''; applyFilters(); }]);
   if (_staleOnly) chips.push(['Stale 30d+', () => { _staleOnly = false; setActiveQuickBtn('all'); applyFilters(); }]);
   if (chips.length === 0) { bar.style.display = 'none'; return; }
   bar.style.display = 'flex';
   bar.innerHTML = '<span style="font-size:11px;color:#94a3b8;margin-right:2px;white-space:nowrap">Active:</span>' +
-    chips.map((c, idx) =>
-      `<button class="af-chip" onclick="_afRemove(${idx})">${escHtml(c[0])} ×</button>`
-    ).join('');
+    chips.map((c, idx) => `<button class="af-chip" onclick="_afRemove(${idx})">${escHtml(c[0])} ×</button>`).join('');
   bar._removers = chips.map(c => c[1]);
 }
 
 function _afRemove(idx) {
   const bar = document.getElementById('active-filters');
-  if (bar && bar._removers && bar._removers[idx]) bar._removers[idx]();
+  if (bar?._removers?.[idx]) bar._removers[idx]();
 }
 
 // ── Quick filter presets ───────────────────────────────────────
 function quickFilter(preset) {
-  document.getElementById('search-q').value   = '';
-  document.getElementById('f-state').value    = '';
-  document.getElementById('f-status').value   = '';
-  const fs = document.getElementById('f-severity'); if (fs) fs.value = '';
-  document.getElementById('f-label').value    = '';
-  document.getElementById('f-assignee').value = '';
+  document.getElementById('search-q').value = '';
+  ['ms-state','ms-status','ms-severity','ms-label','ms-assignee'].forEach(id => setMs(id, []));
   const df = document.getElementById('f-date-from'); if (df) df.value = '';
   const dt = document.getElementById('f-date-to');   if (dt) dt.value = '';
   _staleOnly = false;
-
-  if (preset === 'showstoppers') {
-    document.getElementById('f-state').value    = 'open';
-    if (document.getElementById('f-severity')) document.getElementById('f-severity').value = 'severity/showstopper';
-  } else if (preset === 'stale') {
-    _staleOnly = true;
-  } else if (preset === 'unassigned') {
-    document.getElementById('f-state').value    = 'open';
-    document.getElementById('f-assignee').value = '__unassigned__';
-  } else if (preset === 'nostatus') {
-    document.getElementById('f-state').value  = 'open';
-    document.getElementById('f-status').value = '__none__';
-  }
-
+  if      (preset === 'showstoppers') { setMs('ms-state', ['open']); setMs('ms-severity', ['severity/showstopper']); }
+  else if (preset === 'stale')        { _staleOnly = true; }
+  else if (preset === 'unassigned')   { setMs('ms-state', ['open']); setMs('ms-assignee', ['__unassigned__']); }
+  else if (preset === 'nostatus')     { setMs('ms-state', ['open']); setMs('ms-status', ['__none__']); }
   setActiveQuickBtn(preset);
   applyFilters();
 }
 
 function setActiveQuickBtn(preset) {
   ['all','showstoppers','stale','unassigned','nostatus'].forEach(id => {
-    const el = document.getElementById(`qf-${id}`);
-    if (el) el.classList.toggle('qf-active', id === preset);
+    document.getElementById(`qf-${id}`)?.classList.toggle('qf-active', id === preset);
   });
 }
 
 function clearFilters() {
   _staleOnly = false;
-  document.getElementById('search-q').value   = '';
-  document.getElementById('f-state').value    = '';
-  document.getElementById('f-status').value   = '';
-  const fs = document.getElementById('f-severity'); if (fs) fs.value = '';
-  document.getElementById('f-label').value    = '';
-  document.getElementById('f-assignee').value = '';
+  document.getElementById('search-q').value = '';
+  ['ms-state','ms-status','ms-severity','ms-label','ms-assignee'].forEach(id => setMs(id, []));
   const df = document.getElementById('f-date-from'); if (df) df.value = '';
   const dt = document.getElementById('f-date-to');   if (dt) dt.value = '';
   setActiveQuickBtn('all');
   applyFilters();
 }
+
+// ── Quick-filter helpers (called from table cells) ────────────
+function filterByStatus(val)   { setMs('ms-status',   val ? [val] : []); setActiveQuickBtn('all'); applyFilters(); }
+function filterByState(val)    { setMs('ms-state',    val ? [val] : []); setActiveQuickBtn('all'); applyFilters(); }
+function filterByAssignee(val) { setMs('ms-assignee', val ? [val] : []); setActiveQuickBtn('all'); applyFilters(); }
 
 // ── Sort ──────────────────────────────────────────────────────
 function sortBy(key) {
@@ -223,23 +328,6 @@ function renderTableHeaders() {
   });
 }
 
-// ── Quick-filter helpers (called from table cells) ────────────
-function filterByStatus(val) {
-  document.getElementById('f-status').value = val || '';
-  setActiveQuickBtn('all');
-  applyFilters();
-}
-function filterByState(val) {
-  document.getElementById('f-state').value = val || '';
-  setActiveQuickBtn('all');
-  applyFilters();
-}
-function filterByAssignee(val) {
-  document.getElementById('f-assignee').value = val || '';
-  setActiveQuickBtn('all');
-  applyFilters();
-}
-
 // ── Table ─────────────────────────────────────────────────────
 function renderTable(sorted) {
   const start  = (_page - 1) * PAGE_SIZE;
@@ -252,30 +340,113 @@ function renderTable(sorted) {
     const logins   = (i.assignees||[]).map(a=>a.login);
     if (i.assignee?.login && !logins.includes(i.assignee.login)) logins.push(i.assignee.login);
     const assigneeHtml = logins.length
-      ? logins.map(l => `<span class="assignee-chip" onclick="filterByAssignee('${escHtml(l)}')" title="Filter by ${escHtml(l)}">${escHtml(l)}</span>`).join('')
-      : '<span class="assignee-chip assignee-none" onclick="filterByAssignee(\'__unassigned__\')" title="Filter unassigned">—</span>';
+      ? logins.map(l => `<span class="assignee-chip" onclick="event.stopPropagation();filterByAssignee('${escHtml(l)}')" title="Filter by ${escHtml(l)}">${escHtml(l)}</span>`).join('')
+      : `<span class="assignee-chip assignee-none" onclick="event.stopPropagation();filterByAssignee('__unassigned__')" title="Filter unassigned">—</span>`;
 
     const stateTag = i.state === 'open'
-      ? `<span class="state-open cf-cell" onclick="filterByState('open')" title="Filter: open">open</span>`
-      : `<span class="state-closed cf-cell" onclick="filterByState('closed')" title="Filter: closed">closed</span>`;
+      ? `<span class="state-open cf-cell" onclick="event.stopPropagation();filterByState('open')" title="Filter: open">open</span>`
+      : `<span class="state-closed cf-cell" onclick="event.stopPropagation();filterByState('closed')" title="Filter: closed">closed</span>`;
 
     const statusVal = i.project_status || '';
     const statusHtml = statusVal
-      ? `<span onclick="filterByStatus('${escHtml(statusVal)}')" title="Filter: ${escHtml(statusVal)}" class="cf-cell">${statusPill(statusVal)}</span>`
-      : `<span class="no-status-chip cf-cell" onclick="filterByStatus('__none__')" title="Filter: No status">—</span>`;
+      ? `<span onclick="event.stopPropagation();filterByStatus('${escHtml(statusVal)}')" title="Filter: ${escHtml(statusVal)}" class="cf-cell">${statusPill(statusVal)}</span>`
+      : `<span class="no-status-chip cf-cell" onclick="event.stopPropagation();filterByStatus('__none__')" title="Filter: No status">—</span>`;
 
-    const isActive = _sortKey === 'created_at';
-    const isActiveU = _sortKey === 'updated_at';
-    return `<tr>
-      <td class="num-col"><a href="https://github.com/pucardotorg/dristi/issues/${i.number}" target="_blank">#${i.number}</a></td>
-      <td class="title-col" title="${escHtml(i.title)}">${escHtml(i.title.slice(0,90))}${i.title.length>90?'…':''}</td>
+    const labels = (i.labels||[]).map(l=>l.name).join(', ') || '—';
+
+    // Encode row data for expand panel
+    const rowData = encodeURIComponent(JSON.stringify({
+      number: i.number, title: i.title, status: statusVal, state: i.state,
+      created: created, updated: updated, assignees: logins.join(', ') || '—', labels
+    }));
+
+    return `<tr onclick="toggleRowDetail(this,'${rowData}')" data-num="${i.number}">
+      <td class="num-col"><a href="https://github.com/pucardotorg/dristi/issues/${i.number}" target="_blank" onclick="event.stopPropagation()">#${i.number}</a></td>
+      <td class="title-col"><div class="title-clamp">${escHtml(i.title)}</div></td>
       <td>${statusHtml}</td>
       <td>${stateTag}</td>
-      <td class="date-col${isActive?' sort-col-active':''}">${created}</td>
-      <td class="date-col${isActiveU?' sort-col-active':''}">${updated}</td>
+      <td class="date-col">${created}</td>
+      <td class="date-col">${updated}</td>
       <td class="assignee-col">${assigneeHtml}</td>
     </tr>`;
   }).join('');
+
+  initColResize();
+}
+
+// ── Row expand / collapse ─────────────────────────────────────
+function toggleRowDetail(tr, encodedData) {
+  const num = tr.dataset.num;
+  const existing = document.getElementById(`detail-${num}`);
+  if (existing) {
+    existing.remove();
+    tr.classList.remove('row-expanded');
+    return;
+  }
+  tr.classList.add('row-expanded');
+  const d = JSON.parse(decodeURIComponent(encodedData));
+  const detailTr = document.createElement('tr');
+  detailTr.id = `detail-${num}`;
+  detailTr.className = 'detail-row';
+  detailTr.innerHTML = `<td colspan="7"><div class="detail-panel">
+    <div class="dp-full">${escHtml(d.title)}</div>
+    <div class="dp-meta">
+      <span class="dp-label">Status</span> ${d.status ? statusPill(d.status) : '<span style="color:#94a3b8">—</span>'}
+      <span class="dp-label" style="margin-left:8px">State</span>
+      ${d.state === 'open' ? '<span class="state-open">open</span>' : '<span class="state-closed">closed</span>'}
+    </div>
+    <div class="dp-meta">
+      <span class="dp-label">Created</span> ${escHtml(d.created)}
+      <span class="dp-label" style="margin-left:8px">Updated</span> ${escHtml(d.updated)}
+    </div>
+    <div class="dp-meta">
+      <span class="dp-label">Assignees</span> ${escHtml(d.assignees)}
+    </div>
+    <div class="dp-meta">
+      <span class="dp-label">Labels</span> <span style="color:#475569;font-size:11px">${escHtml(d.labels)}</span>
+    </div>
+    <div style="margin-top:4px">
+      <a href="https://github.com/pucardotorg/dristi/issues/${d.number}" target="_blank"
+         style="font-size:12px;font-weight:600;color:#2563eb" onclick="event.stopPropagation()">
+        Open #${d.number} on GitHub ↗
+      </a>
+    </div>
+  </div></td>`;
+  tr.insertAdjacentElement('afterend', detailTr);
+}
+
+// ── Drag-to-resize column handles ────────────────────────────
+function initColResize() {
+  const table = document.getElementById('issues-table');
+  if (!table) return;
+  // Remove existing handles to avoid duplicates on re-render
+  table.querySelectorAll('.col-resize-handle').forEach(h => h.remove());
+  const cols  = table.querySelectorAll('colgroup col');
+  const ths   = table.querySelectorAll('thead th');
+  ths.forEach((th, idx) => {
+    if (idx === ths.length - 1) return; // skip last col (auto width)
+    const handle = document.createElement('span');
+    handle.className = 'col-resize-handle';
+    th.appendChild(handle);
+    handle.addEventListener('mousedown', e => {
+      e.stopPropagation();
+      e.preventDefault();
+      handle.classList.add('resizing');
+      const startX = e.clientX;
+      const startW = th.offsetWidth;
+      const onMove = ev => {
+        const w = Math.max(50, startW + ev.clientX - startX);
+        if (cols[idx]) cols[idx].style.width = w + 'px';
+      };
+      const onUp = () => {
+        handle.classList.remove('resizing');
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+      };
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+  });
 }
 
 function escHtml(s) {
