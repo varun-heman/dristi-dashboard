@@ -36,9 +36,12 @@ function populateFilterDropdowns(issues) {
     const o = document.createElement('option'); o.value = name; o.textContent = name; fLabel.appendChild(o);
   });
 
-  // Assignees
+  // Assignees — check both assignees[] array and singular assignee field
   const assigneeSet = {};
-  issues.forEach(i => (i.assignees || []).forEach(a => { assigneeSet[a.login] = true; }));
+  issues.forEach(i => {
+    (i.assignees || []).forEach(a => { assigneeSet[a.login] = true; });
+    if (i.assignee?.login) assigneeSet[i.assignee.login] = true;
+  });
   const fAssignee = document.getElementById('f-assignee');
   Object.keys(assigneeSet).sort().forEach(login => {
     const o = document.createElement('option'); o.value = login; o.textContent = login; fAssignee.appendChild(o);
@@ -69,7 +72,7 @@ function applyFilters() {
     if (status && i.project_status !== status) return false;
     if (severity && !i.labels.some(l => l.name === severity)) return false;
     if (label && !i.labels.some(l => l.name === label)) return false;
-    if (assignee && !(i.assignees||[]).some(a => a.login === assignee)) return false;
+    if (assignee && !(i.assignees||[]).some(a => a.login === assignee) && i.assignee?.login !== assignee) return false;
     if (cutoff && new Date(i.created_at) < cutoff) return false;
     return true;
   });
