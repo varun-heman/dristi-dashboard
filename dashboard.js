@@ -94,7 +94,7 @@ function switchTab(name) {
     hideLoader();
     renderDashboard(_issuesData);
     initSearch(_issuesData);             // hand off to search.js
-    setTimeout(runAnalysis, 500);        // kick off AI
+    setTimeout(() => runAnalysis(), 500); // kick off AI (lazy ref — ai.js loads after dashboard.js)
   } catch(err) {
     hideLoader();
     showError(err.message);
