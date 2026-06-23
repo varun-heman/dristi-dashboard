@@ -19,8 +19,16 @@ if not OPENROUTER_KEY:
         json.dump({"generated_at": None, "analysis": None}, f)
     sys.exit(0)
 
-OR_URL   = "https://openrouter.ai/api/v1/chat/completions"
-OR_MODEL = "meta-llama/llama-3.1-8b-instruct:free"
+OR_URL  = "https://openrouter.ai/api/v1/chat/completions"
+
+# Free models to try in order — first one that works wins
+OR_MODELS = [
+    "deepseek/deepseek-r1:free",
+    "google/gemma-3-27b-it:free",
+    "meta-llama/llama-3.3-70b-instruct:free",
+    "qwen/qwen3-8b:free",
+    "mistralai/mistral-7b-instruct:free",
+]
 
 def build_context(issues):
     now    = datetime.now(timezone.utc)
@@ -124,31 +132,41 @@ Please provide:
 
 Be concise and direct. Focus on what matters most for a small engineering team."""
 
-    try:
-        print("Calling OpenRouter for AI analysis…")
-        resp = requests.post(
-            OR_URL,
-            headers={"Authorization": f"Bearer {OPENROUTER_KEY}", "Content-Type": "application/json"},
-            json={"model": OR_MODEL, "messages": [{"role": "user", "content": prompt}], "max_tokens": 1200},
-            timeout=60,
-        )
-        resp.raise_for_status()
-        analysis_text = resp.json()["choices"][0]["message"]["content"]
-        print(f"  Analysis generated ({len(analysis_text)} chars).")
+    analysis_text = None
+    used_model    = None
+    last_error    = None
 
+    for model in OR_MODELS:
+        try:
+            print(f"Trying model: {model}…")
+            resp = requests.post(
+                OR_URL,
+                headers={"Authorization": f"Bearer {OPENROUTER_KEY}", "Content-Type": "application/json"},
+                json={"model": model, "messages": [{"role": "user", "content": prompt}], "max_tokens": 1200},
+                timeout=60,
+            )
+            resp.raise_for_status()
+            analysis_text = resp.json()["choices"][0]["message"]["content"]
+            used_model    = model
+            print(f"  ✓ Success with {model} ({len(analysis_text)} chars).")
+            break
+        except Exception as e:
+            print(f"  ✗ {model} failed: {e}")
+            last_error = str(e)
+
+    if analysis_text:
         output = {
             "generated_at": datetime.now(timezone.utc).isoformat(),
-            "model":        OR_MODEL,
+            "model":        used_model,
             "analysis":     analysis_text,
             "stale":        False,
         }
-    except Exception as e:
-        print(f"  WARNING: AI analysis failed — {e}", file=sys.stderr)
-        print(f"  Preserving previous analysis with stale=true.")
+    else:
+        print(f"  WARNING: All models failed. Preserving previous analysis with stale=true.", file=sys.stderr)
         output = {
             **previous,
-            "stale":       True,
-            "stale_reason": str(e),
+            "stale":        True,
+            "stale_reason": f"All models failed. Last error: {last_error}",
         }
 
     with open(out_path, "w") as f:
