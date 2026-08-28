@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-08-27T10:53:19.565552+00:00",
-  "model": "liquid/lfm-2.5-2.6b:free",
-  "analysis": "## 1. Overall Health Assessment\nThe repository maintains a healthy closure ratio (82 open vs. 4,838 closed), but the high volume of stale issues (19, 23%",
+  "generated_at": "2026-08-28T12:28:35.815900+00:00",
+  "model": "inclusionai/ling-3.0-flash-fin:free",
+  "analysis": "## 1. Overall Health Assessment\n\nThe repository shows a mature project with a strong historical closure rate (98.4%) and active triage, but current open-issue health is strained by a narrow development throughput bottleneck \u2014 only 2 of 81 open issues are actively in progress \u2014 and significant aging, with multiple issues open 200\u2013323 days. A 37-day-old production bug (duplicate warrant payments) and 12 unclassified issues further indicate the team is triaging faster than it resolves.\n\n## 2. Top 3 Risks\n\n- **Production bug #5925 (",
   "stale": false
 }
