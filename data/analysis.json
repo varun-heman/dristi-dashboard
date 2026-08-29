@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-08-28T12:28:35.815900+00:00",
+  "generated_at": "2026-08-29T07:37:53.546373+00:00",
   "model": "inclusionai/ling-3.0-flash-fin:free",
-  "analysis": "## 1. Overall Health Assessment\n\nThe repository shows a mature project with a strong historical closure rate (98.4%) and active triage, but current open-issue health is strained by a narrow development throughput bottleneck \u2014 only 2 of 81 open issues are actively in progress \u2014 and significant aging, with multiple issues open 200\u2013323 days. A 37-day-old production bug (duplicate warrant payments) and 12 unclassified issues further indicate the team is triaging faster than it resolves.\n\n## 2. Top 3 Risks\n\n- **Production bug #5925 (",
+  "analysis": "## 1. Overall Health Assessment\n\nThe repository shows sustained historical throughput (4,840 closed issues) with a currently manageable open pool of 81 issues. However, the health is undermined by a significant aging problem: many open issues\u2014both bugs and enhancements\u2014have been sitting unresolved for 200\u2013323 days, production bugs are exceeding a month without resolution, and nearly a quarter of open issues have no recent activity. The team is effectively carrying a quiet technical debt and triage backlog that puts court-facing reliability at risk.\n\n## 2. Top 3 Risks Requiring Immediate Attention\n\n1. **Production bugs aging without resolution**: Issue #5925 (payment duplication for warrants) has been open 37 days. Two additional production bugs (#5953, #5902) also affect litig",
   "stale": false
 }
