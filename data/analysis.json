@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-08-30T06:11:31.989387+00:00",
+  "generated_at": "2026-08-31T06:36:42.807306+00:00",
   "model": "inclusionai/ling-3.0-flash-fin:free",
-  "analysis": "## 1. Overall Health Assessment\n\nThe repository has a strong historical track record (4,840 closed issues), but current open issue health is concerning: a production-blocking showstopper sits at 38 days old, 23% of open issues are stale, and throughput is critically low with only 2 issues actively in progress. The backlog has aged significantly, with the oldest non-showstopper at 324 days, indicating a triage and prioritization gap rather than a lack of work.\n\n## 2. Top 3 Risks Needing Immediate Attention\n\n1. **Production financial bug (#5925)** \u2014 Duplicate payment on warrant processing is a live production issue at 38 days old. This has direct user trust and potential legal/financial implications for a court case management system.\n2. **Buried, aging backlog with low throughput** \u2014",
+  "analysis": "## 1. Overall Health Assessment\n\nThe repository shows strong throughput (98% of issues closed) but is accumulating a stale backlog with poor aging. 23% of open issues haven't been updated in 30+ days, and several critical items have languished in Backlog/QA for over 200 days. The team is actively triaging new issues but is not closing the loop on old ones fast enough.\n\n## 2. Top",
   "stale": false
 }
