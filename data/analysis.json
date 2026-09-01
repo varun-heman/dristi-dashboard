@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-08-31T06:36:42.807306+00:00",
+  "generated_at": "2026-09-01T05:59:55.182421+00:00",
   "model": "inclusionai/ling-3.0-flash-fin:free",
-  "analysis": "## 1. Overall Health Assessment\n\nThe repository shows strong throughput (98% of issues closed) but is accumulating a stale backlog with poor aging. 23% of open issues haven't been updated in 30+ days, and several critical items have languished in Backlog/QA for over 200 days. The team is actively triaging new issues but is not closing the loop on old ones fast enough.\n\n## 2. Top",
+  "analysis": "## 1. Overall Health Assessment\n\nThe project has strong cumulative velocity (4,842 closed issues) but is carrying a concerning amount of aged unresolved work: 20 open issues are over 200 days old, one production showstopper (payment duplication bug) has been sitting for 40 days, and 21% of open issues have gone stale. The active pipeline is thin \u2014 only 3 issues are In Progress \u2014 suggesting the team is stretching to cover backlog rather than making fresh throughput.\n\n## 2. Top 3 Risks Requiring Immediate Attention\n\n- **Production showstopper aging:** Issue #5925 (warrant payment duplication) has been open 40 days. This directly impacts court financial operations and should be the #1 priority.\n- **Massive aged backlog of unresolved bugs:** At least 10 open issues are 200+ days old, including missing SMS notifications to accused persons (#5902), broken",
   "stale": false
 }
