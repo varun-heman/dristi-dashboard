@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-09-06T05:28:23.442965+00:00",
-  "model": "inclusionai/ling-3.0-flash-fin:free",
-  "analysis": "## 1. Overall Health Assessment\n\nPUCAR v1.0 shows a generally healthy repository with a 98.4% issue closure rate (4,844/4,924) and a manageable 80 open issues. However, **22%",
+  "generated_at": "2026-09-07T05:38:34.970271+00:00",
+  "model": "inclusionai/ling-3.0-flash-sante:free",
+  "analysis": "**Overall health assessment**\nThe repo is in decent shape operationally (98.4% closed, only 1 open showstopper), but the open queue is stalling: 40% of open issues are Backlog or No Status, only 4 are In Progress, and 19 are stale. A small core team (top 3 assignees own 51% of open work) is being dragged by production bugs and tech debt instead of moving features forward.\n\n**Top 3 risks**\n1. **Production bugs aging** \u2013 The lone showstopper (#5925, 46d) and three other Production issues (#5953, #5902, #5968) are customer-facing and need immediate triage.\n2. **Throughput bottleneck** \u2013 32 Backlog + 11 No Status vs. 4 In Progress means work isn\u2019t flowing; the team is effectively single-threaded on a few items.\n3. **Key-person dependency** \u2013 Hemadri-Chinna (16) and ashishbeehyv (14) are on 38% of all open issues; if either is blocked, progress stalls.\n\n**Actionable recommendations**\n- Triage the 11 \u201cNo Status\u201d issues today: close, delegate, or move to Backlog with a clear owner.\n- Pull 2\u20133 issues from \u201cQA Completed / Ready For Dev\u201d into the current sprint to unblock UAT flow.\n- Create a 3-day \u201cProduction Bug Blitz\u201d for #5925, #5953, #5902, #5",
   "stale": false
 }
