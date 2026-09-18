@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-09-17T05:41:59.985540+00:00",
-  "model": "inclusionai/ling-3.0-flash-vl:free",
-  "analysis": "## PUCAR v1.0 (dristi) \u2014 Issue Health Review (as of 2026-09-17)\n\n---\n\n### 1. Overall Health Assessment\n\nThe repository shows strong historical execution (4,848 closed vs. 81 open, 98.4% closure rate) and a well-structured project workflow. However, **half of all open issues (51%) are stale**, throughput has nearly stalled with only **2 issues actively In Progress**, and a **production payment bug has been open for 56 days**. The pipeline is back-end loaded \u2014 many issues sit in Backlog or Waiting states while very few advance to active development.\n\n---\n\n### 2. Top 3 Risks\n\n| # | Risk | Severity |\n|---|------|----------|\n| **1** | **Showstopper #5925 (duplicate process/warrant payment) is 56 days old in Production.** This is a financial accuracy bug sitting in a live environment for nearly 2 months \u2014 potential revenue impact and audit exposure. | **Critical** |\n| **2** | **51%",
+  "generated_at": "2026-09-18T05:31:07.898112+00:00",
+  "model": "deepseek/deepseek-v4-flash-0731:free",
+  "analysis": " ",
   "stale": false
 }
