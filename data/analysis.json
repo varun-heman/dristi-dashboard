@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-09-27T06:08:27.597738+00:00",
+  "generated_at": "2026-09-28T06:17:46.196654+00:00",
   "model": "inclusionai/ling-3.0-flash-fin:free",
-  "analysis": "## 1. Overall Health Assessment\n\nThe repository shows a high closure rate (98.3",
+  "analysis": "## 1. Overall Health Assessment\n\nThe repository shows a mature, actively maintained codebase with 4,853 closed issues, but current momentum is concerning. Only 3 issues are actively in progress and 67% of open issues have gone stale (30+ days without updates). A heavy backlog (31 issues), significant aging tech debt (issues dating back 353 days), and concentrated ownership across just 2 primary assignees suggest the team is struggling to maintain throughput while shipping new features. The system is functional but shows signs of accumulating drag.\n\n---\n\n## 2. Top 3 Risks Requiring Immediate Attention\n\n**Risk 1 \u2014 Stale Production Showstopper (#5925, 67d old)**\nA duplicate payment bug for warrant processing has been open for over 2 months in Production status. For",
   "stale": false
 }
